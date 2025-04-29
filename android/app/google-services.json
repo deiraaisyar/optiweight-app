@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "323962844819",
+    "project_id": "optiweight-app",
+    "storage_bucket": "optiweight-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:323962844819:android:8bd165c783ced71db47f66",
+        "android_client_info": {
+          "package_name": "com.optiweight"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBr5kR92DTphOt54_oLZBXWC_fUQz4pqyA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
