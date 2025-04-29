@@ -2,8 +2,9 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text } from 'react-native'; // Import View and Text from react-native
-import AuthScreen from './screens/AuthScreenTest'; // Ensure this file exists
+import AuthScreen from './screens/AuthScreenTest'; // Ini coba buat ngetest doang
 
+// Nanti sisanya di code di sini
 // Dummy HomeScreen component
 const HomeScreen = () => {
   return (
