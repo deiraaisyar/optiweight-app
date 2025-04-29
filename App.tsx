@@ -1,69 +1,31 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import auth from '@react-native-firebase/auth';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { View, Text } from 'react-native'; // Import View and Text from react-native
+import AuthScreen from './screens/AuthScreenTest'; // Ensure this file exists
 
-const App = () => {
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [error, setError] = useState<string>('');
-
-  const signUp = async () => {
-    try {
-      await auth().createUserWithEmailAndPassword(email, password);
-      setError('');
-      alert('User created successfully!');
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-
-  const signIn = async () => {
-    try {
-      await auth().signInWithEmailAndPassword(email, password);
-      setError('');
-      alert('Logged in successfully!');
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-
+// Dummy HomeScreen component
+const HomeScreen = () => {
   return (
-    <View style={styles.container}>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-      />
-      <Button title="Sign Up" onPress={signUp} />
-      <Button title="Sign In" onPress={signIn} />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Welcome to the Home Screen!</Text>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    justifyContent: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    marginBottom: 12,
-    padding: 10,
-    borderRadius: 4,
-  },
-  error: {
-    marginTop: 10,
-    color: 'red',
-  },
-});
+const Stack = createNativeStackNavigator();
+
+const App = () => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Auth">
+        {/* AuthScreen as the first screen */}
+        <Stack.Screen name="Auth" component={AuthScreen} />
+        {/* Add HomeScreen to the stack */}
+        <Stack.Screen name="Home" component={HomeScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
 
 export default App;
