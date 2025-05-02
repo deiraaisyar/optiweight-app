@@ -1,11 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, Alert } from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  View,
+  TextInput,
+  Button,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import auth from '@react-native-firebase/auth';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { GOOGLE_WEB_CLIENT_ID } from '@env';
-
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {GOOGLE_WEB_CLIENT_ID} from '@env';
 
 // BACKEND
 type RootStackParamList = {
@@ -18,11 +26,12 @@ const AuthScreen = () => {
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID, 
+      webClientId: GOOGLE_WEB_CLIENT_ID,
       offlineAccess: true,
     });
   }, []);
@@ -51,7 +60,7 @@ const AuthScreen = () => {
 
   const signInWithGoogle = async () => {
     try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
 
       const signInResult = await GoogleSignin.signIn();
       console.log('Google Sign-In Result:', signInResult);
@@ -75,8 +84,44 @@ const AuthScreen = () => {
   };
 
   // FRONTEND
+  // return (
+  //   <View style={styles.container}>
+  //     <TextInput
+  //       placeholder="Email"
+  //       value={email}
+  //       onChangeText={setEmail}
+  //       style={styles.input}
+  //       keyboardType="email-address"
+  //       autoCapitalize="none"
+  //     />
+  //     <TextInput
+  //       placeholder="Password"
+  //       secureTextEntry
+  //       value={password}
+  //       onChangeText={setPassword}
+  //       style={styles.input}
+  //     />
+  //     <Button title="Sign Up" onPress={signUp} />
+  //     <Button title="Sign In" onPress={signIn} />
+  //     <Button title="Login with Google" onPress={signInWithGoogle} />
+  //     {error ? <Text style={styles.error}>{error}</Text> : null}
+  //   </View>
+  // );
+
   return (
     <View style={styles.container}>
+      <Text style={styles.createAccount}>Create your account</Text>
+
+      <Text style={styles.welcome}>Welcome to</Text>
+      {/* <Text style={styles.logo}>Optiweight ↑</Text> */}
+      <Image
+        source={require('../assets/images/optiweight-logo.webp')}
+        style={styles.logo}
+      />
+      <Text style={styles.subtitle}>
+        Start your journey in optimizing your{'\n'}weight and healthy
+      </Text>
+
       <TextInput
         placeholder="Email"
         value={email}
@@ -92,28 +137,121 @@ const AuthScreen = () => {
         onChangeText={setPassword}
         style={styles.input}
       />
-      <Button title="Sign Up" onPress={signUp} />
-      <Button title="Sign In" onPress={signIn} />
-      <Button title="Login with Google" onPress={signInWithGoogle} />
+
+      <TouchableOpacity style={styles.loginButton} onPress={signUp}>
+        <Text style={styles.loginText}>SignUp</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.loginButton} onPress={signIn}>
+        <Text style={styles.loginText}>Login</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.googleButton} onPress={signInWithGoogle}>
+        <Text style={styles.googleText}>Log in with Google</Text>
+      </TouchableOpacity>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 };
 
+// const styles = StyleSheet.create({
+//   container: {
+//     padding: 20,
+//     justifyContent: 'center',
+//   },
+//   input: {
+//     borderWidth: 1,
+//     marginBottom: 12,
+//     padding: 10,
+//     borderRadius: 4,
+//   },
+//   error: {
+//     marginTop: 10,
+//     color: 'red',
+//   },
+// });
+
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    flex: 1,
+    padding: 30,
+    backgroundColor: '#fff',
     justifyContent: 'center',
+  },
+  createAccount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    position: 'absolute',
+    top: 60,
+    left: 30,
+  },
+  welcome: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  // logo: {
+  //   fontSize: 30,
+  //   fontWeight: 'bold',
+  //   textAlign: 'center',
+  //   color: '#000',
+  // },
+  logo: {
+    width: 200,
+    height: 60,
+    alignSelf: 'center',
+    resizeMode: 'contain',
+    marginBottom: 10,
+  },
+  subtitle: {
+    textAlign: 'center',
+    color: 'gray',
+    marginBottom: 30,
   },
   input: {
     borderWidth: 1,
-    marginBottom: 12,
-    padding: 10,
-    borderRadius: 4,
+    borderColor: '#ccc',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 15,
+  },
+  loginButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  loginText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 25,
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  googleText: {
+    marginLeft: 5,
+    color: '#000',
   },
   error: {
-    marginTop: 10,
     color: 'red',
+    marginTop: 10,
+    textAlign: 'center',
   },
 });
 
