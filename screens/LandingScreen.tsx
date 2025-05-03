@@ -26,7 +26,6 @@ const LandingScreen = ({navigation}: any) => {
 
       {/* Tombol ke Login */}
       {/* <Button title="Login" onPress={() => navigation.navigate('Auth')} /> */}
-
       <TouchableOpacity
         onPress={() => navigation.navigate('Auth')}
         style={{
@@ -46,6 +45,29 @@ const LandingScreen = ({navigation}: any) => {
             textAlign: 'center',
           }}>
           Login
+        </Text>
+      </TouchableOpacity>
+
+      {/* Tombol ke Register */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Register')}
+        style={{
+          backgroundColor: '#B6B6B6',
+          width: 180,
+          padding: 10,
+          borderRadius: 40,
+          marginTop: 20,
+          alignItems: 'center', // Untuk membuat teks di tengah
+          paddingTop: 6, // Menambahkan jarak atas
+        }}>
+        <Text
+          style={{
+            color: '#fff',
+            fontSize: 16,
+            fontFamily: 'Inter-Bold',
+            textAlign: 'center',
+          }}>
+          Create an account
         </Text>
       </TouchableOpacity>
     </View>

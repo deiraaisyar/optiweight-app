@@ -84,30 +84,6 @@ const AuthScreen = () => {
   };
 
   // FRONTEND
-  // return (
-  //   <View style={styles.container}>
-  //     <TextInput
-  //       placeholder="Email"
-  //       value={email}
-  //       onChangeText={setEmail}
-  //       style={styles.input}
-  //       keyboardType="email-address"
-  //       autoCapitalize="none"
-  //     />
-  //     <TextInput
-  //       placeholder="Password"
-  //       secureTextEntry
-  //       value={password}
-  //       onChangeText={setPassword}
-  //       style={styles.input}
-  //     />
-  //     <Button title="Sign Up" onPress={signUp} />
-  //     <Button title="Sign In" onPress={signIn} />
-  //     <Button title="Login with Google" onPress={signInWithGoogle} />
-  //     {error ? <Text style={styles.error}>{error}</Text> : null}
-  //   </View>
-  // );
-
   return (
     <View style={styles.container}>
       <Text style={styles.createAccount}>Create your account</Text>
@@ -138,9 +114,9 @@ const AuthScreen = () => {
         style={styles.input}
       />
 
-      <TouchableOpacity style={styles.loginButton} onPress={signUp}>
+      {/* <TouchableOpacity style={styles.loginButton} onPress={signUp}>
         <Text style={styles.loginText}>SignUp</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <TouchableOpacity style={styles.loginButton} onPress={signIn}>
         <Text style={styles.loginText}>Login</Text>
@@ -154,23 +130,6 @@ const AuthScreen = () => {
     </View>
   );
 };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     padding: 20,
-//     justifyContent: 'center',
-//   },
-//   input: {
-//     borderWidth: 1,
-//     marginBottom: 12,
-//     padding: 10,
-//     borderRadius: 4,
-//   },
-//   error: {
-//     marginTop: 10,
-//     color: 'red',
-//   },
-// });
 
 const styles = StyleSheet.create({
   container: {

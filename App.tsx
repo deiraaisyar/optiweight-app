@@ -5,6 +5,7 @@ import {View, Text} from 'react-native'; // Import View and Text from react-nati
 
 import AuthScreen from './screens/AuthScreenTest';
 import LandingScreen from './screens/LandingScreen';
+import RegisterPage from './screens/RegisterPage';
 
 // Nanti sisanya di code di sini
 // Dummy HomeScreen component
@@ -15,7 +16,6 @@ const HomeScreen = () => {
     </View>
   );
 };
-
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +34,12 @@ const App = () => {
         <Stack.Screen
           name="Auth"
           component={AuthScreen}
+          options={{headerShown: false}}
+        />
+
+        <Stack.Screen
+          name="Register"
+          component={RegisterPage}
           options={{headerShown: false}}
         />
 
