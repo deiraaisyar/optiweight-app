@@ -227,14 +227,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-<<<<<<< HEAD
   Alert,
 } from 'react-native';
-=======
-} 
 
 from 'react-native';
->>>>>>> 6d824a4 (Adding Firebase Package)
 import auth from '@react-native-firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';

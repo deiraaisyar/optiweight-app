@@ -10,14 +10,10 @@
     "test": "jest"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@react-native-community/datetimepicker": "^8.3.0",
-    "@react-native-firebase/app": "^22.1.0",
-    "@react-native-firebase/auth": "^22.1.0",
-=======
+
     "@react-native-firebase/app": "^22.1.0",
     "@react-native-firebase/auth": "^22.0.0",
->>>>>>> 6d824a4 (Adding Firebase Package)
     "@react-native-firebase/firestore": "^22.1.0",
     "@react-native-google-signin/google-signin": "^13.2.0",
     "@react-navigation/native": "^7.1.6",
