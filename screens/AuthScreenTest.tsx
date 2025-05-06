@@ -8,7 +8,9 @@ import {
   Alert,
   TouchableOpacity,
   Image,
-} from 'react-native';
+} 
+
+from 'react-native';
 import auth from '@react-native-firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
