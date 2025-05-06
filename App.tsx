@@ -6,6 +6,7 @@ import {View, Text} from 'react-native'; // Import View and Text from react-nati
 import AuthScreen from './screens/AuthScreenTest';
 import LandingScreen from './screens/LandingScreen';
 import RegisterPage from './screens/RegisterPage';
+import UserDataScreen from './screens/UserDataScreen';
 
 // Nanti sisanya di code di sini
 // Dummy HomeScreen component
@@ -40,6 +41,12 @@ const App = () => {
         <Stack.Screen
           name="Register"
           component={RegisterPage}
+          options={{headerShown: false}}
+        />
+
+        <Stack.Screen
+          name="UserData"
+          component={UserDataScreen}
           options={{headerShown: false}}
         />
 
