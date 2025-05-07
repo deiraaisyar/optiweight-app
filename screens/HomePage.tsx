@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types'; // Import RootStackParamList
+
+type HomePageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomePage = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<HomePageNavigationProp>();
 
   return (
     <View style={styles.container}>

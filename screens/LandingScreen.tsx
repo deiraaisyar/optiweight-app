@@ -7,8 +7,12 @@ import {
   Image,
   TouchableOpacity,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types'; // Import RootStackParamList
 
-const LandingScreen = ({navigation}: any) => {
+type LandingScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Landing'>;
+
+const LandingScreen = ({ navigation }: { navigation: LandingScreenNavigationProp }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.welcome}>Welcome To</Text>

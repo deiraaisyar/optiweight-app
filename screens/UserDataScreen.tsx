@@ -10,17 +10,14 @@ import {
   Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { RootStackParamList } from '../types'; // Import RootStackParamList
 
 // Define RootStackParamList for navigation
-type RootStackParamList = {
-  Auth: undefined;
-  Home: undefined;
-  UserData: undefined;
-};
+type UserDataScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserData'>;
 
 const UserDataScreen = () => {
   const [fullName, setFullName] = useState<string>('');
@@ -31,7 +28,7 @@ const UserDataScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<UserDataScreenNavigationProp>();
   
   useEffect(() => {
     // Check if user is logged in

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AiLogo from '../assets/images/ai_logo.webp';
 import HomeIcon from '../assets/images/home_icon.webp';
@@ -13,8 +14,11 @@ import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 import BackIcon from '../assets/images/back_button.webp';
+import { RootStackParamList } from '../types'; // Import RootStackParamList
 
-const AIChatboxScreen = ({ navigation }: any) => {
+type ChatBotLandingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatBotLanding'>;
+
+const AIChatboxScreen = ({ navigation }: { navigation: ChatBotLandingNavigationProp }) => {
   return (
     <View style={styles.container}>
       {/* Back Button */}

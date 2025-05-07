@@ -10,56 +10,66 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_API_KEY } from '@env';
-import { firebaseConfig } from '../firebaseConfig';
 import MicIcon from '../assets/images/mic_icon.webp';
 import PlusIcon from '../assets/images/plus_icon.webp';
 import BackIcon from '../assets/images/back_button.webp';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth'; // Tambahkan impor untuk Firebase Auth
 
-// Inisialisasi Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+type ChatBotMainNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatBotMain'>;
 
-// GEMINI
+type ChatMessage = {
+  sender: 'Me' | 'Optiweight AI';
+  message: string;
+};
+
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-const ChatBotMain = ({ navigation }: any) => {
+const ChatBotMain = ({ navigation }: { navigation: ChatBotMainNavigationProp }) => {
   const [input, setInput] = useState('');
-  const [chat, setChat] = useState<string[]>([]);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  const getData = async () => {
+    try {
+      // Ambil pengguna yang sedang login
+      const user = auth().currentUser;
+
       if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          } else {
-            console.log('No user document found');
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
+        // Ambil dokumen pengguna berdasarkan UID
+        const userDoc = await firestore().collection('users').doc(user.uid).get();
+
+        if (userDoc.exists) {
+          console.log('User data fetched:', userDoc.data());
+          setUserData(userDoc.data());
+        } else {
+          console.log('No user document found for UID:', user.uid);
         }
       } else {
-        console.log('User not logged in');
-        navigation.replace('Auth'); // Redirect ke layar login
+        console.log('No user is logged in');
+        navigation.navigate('Auth'); // Redirect ke halaman login jika tidak ada pengguna login
       }
-      setLoadingUser(false);
-    });
+    } catch (error) {
+      console.error('Error fetching user data from Firestore:', error);
+    } finally {
+      setLoadingUser(false); // Set loading selesai
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    getData();
   }, []);
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    setChat((prev) => [...prev, `You: ${input}`]);
+
+    const userMessage: ChatMessage = { sender: 'Me', message: input };
+    setChat((prev) => [...prev, userMessage]);
 
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-002' });
@@ -76,11 +86,15 @@ Only use relevant data, and if the question is general, provide a helpful genera
 
       const result = await model.generateContent(prompt);
       const response = result?.response?.text() || 'No response from AI.';
+      const aiMessage: ChatMessage = { sender: 'Optiweight AI', message: response };
 
-      setChat((prev) => [...prev, `AI: ${response}`]);
+      setChat((prev) => [...prev, aiMessage]);
     } catch (err) {
       console.error('Error generating AI response:', err);
-      setChat((prev) => [...prev, 'AI: Sorry, something went wrong.']);
+      setChat((prev) => [
+        ...prev,
+        { sender: 'Optiweight AI', message: 'Sorry, something went wrong.' },
+      ]);
     }
 
     setInput('');
@@ -111,7 +125,23 @@ Only use relevant data, and if the question is general, provide a helpful genera
       {/* Chat Content */}
       <ScrollView contentContainerStyle={styles.chatBox}>
         {chat.map((msg, index) => (
-          <Text key={index} style={styles.chatText}>{msg}</Text>
+          <View
+            key={index}
+            style={[
+              styles.messageContainer,
+              msg.sender === 'Me' ? styles.rightAlign : styles.leftAlign,
+            ]}
+          >
+            <View
+              style={[
+                styles.messageBubble,
+                msg.sender === 'Me' ? styles.userBubble : styles.aiBubble,
+              ]}
+            >
+              <Text style={styles.senderText}>{msg.sender}</Text>
+              <Text style={styles.messageText}>{msg.message}</Text>
+            </View>
+          </View>
         ))}
       </ScrollView>
 
@@ -169,7 +199,41 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
   },
   chatBox: { flexGrow: 1, paddingBottom: 20 },
-  chatText: { fontSize: 14, marginVertical: 4, fontFamily: 'Inter-Regular' },
+  messageContainer: {
+    marginVertical: 6,
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+  },
+  leftAlign: {
+    justifyContent: 'flex-start',
+  },
+  rightAlign: {
+    justifyContent: 'flex-end',
+  },
+  messageBubble: {
+    maxWidth: '75%',
+    padding: 10,
+    borderRadius: 16,
+  },
+  aiBubble: {
+    backgroundColor: '#F0F0F0',
+    borderTopLeftRadius: 0,
+  },
+  userBubble: {
+    backgroundColor: '#DCF8C6',
+    borderTopRightRadius: 0,
+  },
+  senderText: {
+    fontSize: 10,
+    color: '#555',
+    marginBottom: 4,
+    fontFamily: 'Inter-Bold',
+  },
+  messageText: {
+    fontSize: 14,
+    color: '#000',
+    fontFamily: 'Inter-Regular',
+  },
   greetingText: {
     fontSize: 16,
     fontWeight: 'bold',

@@ -186,21 +186,15 @@ import {
 import auth from '@react-native-firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../types'; // Import RootStackParamList
 
-// BACKEND
-type RootStackParamList = {
-  Auth: undefined;
-  Home: undefined;
-};
+type RegisterPageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
-const RegisterPage = () => {
+const RegisterPage = ({navigation}: {navigation: RegisterPageNavigationProp}) => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
-
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const validatePasswords = (): boolean => {
     if (password !== confirmPassword) {

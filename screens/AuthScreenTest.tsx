@@ -234,22 +234,17 @@ import auth from '@react-native-firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
+import { RootStackParamList } from '../types'; // Import RootStackParamList
 
 // BACKEND
-type RootStackParamList = {
-  Auth: undefined;
-  Register: undefined;
-  Home: undefined;
-  UserData: undefined;
-};
+type AuthScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Auth'>;
 
 const AuthScreen = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<AuthScreenNavigationProp>();
 
   const signIn = async () => {
     if (!email || !password) {
