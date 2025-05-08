@@ -121,10 +121,6 @@ const ProfileScreen = () => {
           <Text style={styles.userName}>{userData?.preferredName || 'User'}</Text>
           <Text style={styles.userEmail}>{auth().currentUser?.email}</Text>
         </View>
-
-        {/* <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </TouchableOpacity> */}
       </View>
 
       <View style={styles.infoSection}>

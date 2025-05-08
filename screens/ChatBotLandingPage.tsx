@@ -48,7 +48,8 @@ const AIChatboxScreen = ({ navigation }: { navigation: ChatBotLandingNavigationP
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 20,
+    top: 60,
     left: 20,
     zIndex: 10,
   },
