@@ -9,6 +9,7 @@ import UserDataScreen from './screens/UserDataScreen';
 import ChatBotLandingPage from './screens/ChatBotLandingPage';
 import HomePage from './screens/HomePage';
 import ChatBotMain from './screens/ChatBotMain';
+import ProfilePage from './screens/ProfilePage';
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +46,11 @@ const App = () => {
           name="Home"
           component={HomePage}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfilePage}
+          options={{headerShown: false}}
         />
         <Stack.Screen
           name="ChatBotMain"
