@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, ScrollView} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../types'; // Import RootStackParamList
@@ -101,89 +101,186 @@ const HomePage = () => {
     );
   }
 
+  // return (
+  //   <View style={styles.container}>
+  //     <View style={styles.header}>
+  //       <Text style={styles.welcomeText}>Welcome Back!</Text>
+  //     </View>
+
+  //     <View style={styles.profileSection}>
+  //       <View style={styles.avatarContainer}>
+  //         <View style={styles.avatar}>
+  //           <Text style={styles.avatarText}>
+  //             {userData?.preferredName ? userData.preferredName.charAt(0).toUpperCase() : 'U'}
+  //           </Text>
+  //         </View>
+  //         {/* <Text style={styles.userName}>{userData?.preferredName || 'User'}</Text>
+  //         <Text style={styles.userEmail}>{auth().currentUser?.email}</Text> */}
+  //       </View>
+  //     </View>
+
+  //     <View style={styles.statsContainer}>
+  //       {/* Weekly Workout Stat */}
+  //       <View style={styles.statItem}>
+  //         <View style={[styles.statCircle, styles.workoutCircle]}>
+  //           <Text style={[styles.statNumber, styles.workoutNumber]}>asep</Text>
+  //         </View>
+  //         <Text style={styles.statLabel}>Weekly Workout</Text>
+  //       </View>
+
+  //       {/* Streak Stat */}
+  //       <View style={styles.statItem}>
+  //         <View style={[styles.statCircle, styles.streakCircle]}>
+  //           <Text style={[styles.statNumber, styles.streakNumber]}>asep</Text>
+  //         </View>
+  //         <Text style={styles.statLabel}>Streak</Text>
+  //       </View>
+  //     </View>
+
+  //     <View style={styles.scheduleCard}>
+  //       <View style={styles.scheduleContent}>
+  //         <Text style={styles.cardTitle}>
+  //           Set up your personalized workout schedule!
+  //         </Text>
+  //         <Text style={styles.cardSubtitle}>
+  //           The journey of a thousand miles begins with a single step
+  //         </Text>
+  //         <TouchableOpacity style={styles.scheduleButton}>
+  //           <Text style={styles.buttonText}>Start personalized schedule</Text>
+  //         </TouchableOpacity>
+  //       </View>
+  //       <View style={styles.calendarIconContainer}>
+  //         <CalendarIcon />
+  //       </View>
+  //     </View>
+
+  //     {/* Info Cards Section */}
+  //     <View style={styles.infoCardsContainer}>
+  //       {/* AI Chatbox Card */}
+  //       <View style={styles.infoCard}>
+  //         <Text style={styles.cardTitle}>AI Chatbox</Text>
+  //         <Text style={styles.cardSubtitle}>Have a conversation with me!</Text>
+  //         <Text style={styles.cardDescription}>
+  //           The AI Chatbox provides users a platform to gain new knowledge
+  //           tailored to reach their goals.
+  //         </Text>
+  //         <TouchableOpacity style={styles.chatButton}>
+  //           <Text
+  //             style={styles.buttonText}
+  //             onPress={() => navigation.navigate('ChatBotLanding')}>
+  //             Visit AI Chatbox
+  //           </Text>
+  //         </TouchableOpacity>
+  //       </View>
+
+  //       {/* Motivational Quote Card */}
+  //       <View style={styles.infoCard}>
+  //         <Text style={styles.quoteText}>
+  //           "A healthy weight isn't about perfection or restrictions. It's about
+  //           balance, strength, and self-respect. Every workout, no matter how
+  //           small, is a step toward a stronger body and a clearer mind." 
+  //         </Text>
+  //       </View>
+  //     </View>
+
+  //     {/* Bottom Navigation */}
+  //     <View style={styles.navbar}>
+  //       <TouchableOpacity style={styles.navItem}>
+  //         <Image source={HomeIcon} style={styles.navIcon} />
+  //         <Text style={styles.navText}>Home</Text>
+  //       </TouchableOpacity>
+  //       <TouchableOpacity style={styles.navItem}>
+  //         <Image source={BookOpenIcon} style={styles.navIcon} />
+  //         <Text style={styles.navText}>Library</Text>
+  //       </TouchableOpacity>
+  //       <TouchableOpacity style={styles.navItem}>
+  //         <Image source={NotificationIcon} style={styles.navIcon} />
+  //         <Text style={styles.navText}>Notification</Text>
+  //       </TouchableOpacity>
+  //       <TouchableOpacity
+  //         style={styles.navItem}
+  //         onPress={() => navigation.navigate('Profile')}>
+  //         <Image source={UserIcon} style={styles.navIcon} />
+  //         <Text style={styles.navText}>Profile</Text>
+  //       </TouchableOpacity>
+  //     </View>
+  //   </View>
+  // );
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome Back!</Text>
-      </View>
-
-      <View style={styles.profileSection}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {userData?.preferredName ? userData.preferredName.charAt(0).toUpperCase() : 'U'}
+    <View style={{flex: 1, backgroundColor: '#fff'}}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.welcomeText}>Welcome Back!</Text>
+        </View>
+  
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {userData?.preferredName ? userData.preferredName.charAt(0).toUpperCase() : 'U'}
+              </Text>
+            </View>
+          </View>
+        </View>
+  
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <View style={[styles.statCircle, styles.workoutCircle]}>
+              <Text style={[styles.statNumber, styles.workoutNumber]}>asep</Text>
+            </View>
+            <Text style={styles.statLabel}>Weekly Workout</Text>
+          </View>
+          <View style={styles.statItem}>
+            <View style={[styles.statCircle, styles.streakCircle]}>
+              <Text style={[styles.statNumber, styles.streakNumber]}>asep</Text>
+            </View>
+            <Text style={styles.statLabel}>Streak</Text>
+          </View>
+        </View>
+  
+        <View style={styles.scheduleCard}>
+          <View style={styles.scheduleContent}>
+            <Text style={styles.cardTitle}>Set up your personalized workout schedule!</Text>
+            <Text style={styles.cardSubtitle}>
+              The journey of a thousand miles begins with a single step
+            </Text>
+            <TouchableOpacity style={styles.scheduleButton}>
+              <Text style={styles.buttonText}>Start personalized schedule</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.calendarIconContainer}>
+            <CalendarIcon />
+          </View>
+        </View>
+  
+        <View style={styles.infoCardsContainer}>
+          <View style={styles.infoCard}>
+            <Text style={styles.cardTitle}>AI Chatbox</Text>
+            <Text style={styles.cardSubtitle}>Have a conversation with me!</Text>
+            <Text style={styles.cardDescription}>
+              The AI Chatbox provides users a platform to gain new knowledge
+              tailored to reach their goals.
+            </Text>
+            <TouchableOpacity style={styles.chatButton}>
+              <Text
+                style={styles.buttonText}
+                onPress={() => navigation.navigate('ChatBotLanding')}>
+                Visit AI Chatbox
+              </Text>
+            </TouchableOpacity>
+          </View>
+  
+          <View style={styles.infoCard}>
+            <Text style={styles.quoteText}>
+              "A healthy weight isn't about perfection or restrictions. It's about
+              balance, strength, and self-respect. Every workout, no matter how
+              small, is a step toward a stronger body and a clearer mind." dfilkjfklajkljkdfhkahkahskdslkjd;ajdlsa;k
             </Text>
           </View>
-          {/* <Text style={styles.userName}>{userData?.preferredName || 'User'}</Text>
-          <Text style={styles.userEmail}>{auth().currentUser?.email}</Text> */}
         </View>
-      </View>
-
-      <View style={styles.statsContainer}>
-        {/* Weekly Workout Stat */}
-        <View style={styles.statItem}>
-          <View style={[styles.statCircle, styles.workoutCircle]}>
-            <Text style={[styles.statNumber, styles.workoutNumber]}>asep</Text>
-          </View>
-          <Text style={styles.statLabel}>Weekly Workout</Text>
-        </View>
-
-        {/* Streak Stat */}
-        <View style={styles.statItem}>
-          <View style={[styles.statCircle, styles.streakCircle]}>
-            <Text style={[styles.statNumber, styles.streakNumber]}>asep</Text>
-          </View>
-          <Text style={styles.statLabel}>Streak</Text>
-        </View>
-      </View>
-
-      <View style={styles.scheduleCard}>
-        <View style={styles.scheduleContent}>
-          <Text style={styles.cardTitle}>
-            Set up your personalized workout schedule!
-          </Text>
-          <Text style={styles.cardSubtitle}>
-            The journey of a thousand miles begins with a single step
-          </Text>
-          <TouchableOpacity style={styles.scheduleButton}>
-            <Text style={styles.buttonText}>Start personalized schedule</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.calendarIconContainer}>
-          <CalendarIcon />
-        </View>
-      </View>
-
-      {/* Info Cards Section */}
-      <View style={styles.infoCardsContainer}>
-        {/* AI Chatbox Card */}
-        <View style={styles.infoCard}>
-          <Text style={styles.cardTitle}>AI Chatbox</Text>
-          <Text style={styles.cardSubtitle}>Have a conversation with me!</Text>
-          <Text style={styles.cardDescription}>
-            The AI Chatbox provides users a platform to gain new knowledge
-            tailored to reach their goals.
-          </Text>
-          <TouchableOpacity style={styles.chatButton}>
-            <Text
-              style={styles.buttonText}
-              onPress={() => navigation.navigate('ChatBotLanding')}>
-              Visit AI Chatbox
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Motivational Quote Card */}
-        <View style={styles.infoCard}>
-          <Text style={styles.quoteText}>
-            "A healthy weight isn't about perfection or restrictions. It's about
-            balance, strength, and self-respect. Every workout, no matter how
-            small, is a step toward a stronger body and a clearer mind."
-          </Text>
-        </View>
-      </View>
-
-      {/* Bottom Navigation */}
+      </ScrollView>
+  
+      {/* Navbar tetap di bawah */}
       <View style={styles.navbar}>
         <TouchableOpacity style={styles.navItem}>
           <Image source={HomeIcon} style={styles.navIcon} />
@@ -206,9 +303,18 @@ const HomePage = () => {
       </View>
     </View>
   );
+  
 };
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 15,
+    paddingTop: 40,
+    paddingBottom: 100, // Supaya konten gak ketiban navbar
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  
   profileSection: {
     // backgroundColor: 'white',
     marginTop: 20,
