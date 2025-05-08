@@ -10,32 +10,35 @@ import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 
-type HomePageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type ProfilePageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
-const HomePage = () => {
-  const navigation = useNavigation<HomePageNavigationProp>();
+const ProfilePage = () => {
+  const navigation = useNavigation<ProfilePageNavigationProp>();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to the Home Page!</Text>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('ChatBotLanding')}
-      >
-        <Text style={styles.buttonText}>Go to ChatBot</Text>
-      </TouchableOpacity>
+      <Text style={styles.title}>Welcome to the Profile Page!</Text>
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}
+        >
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Library')} // Gadaa
+        >
           <Image source={BookOpenIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Library</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Notification')} // Gaada
+        >
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
@@ -59,16 +62,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
   },
   navbar: {
     flexDirection: 'row',
@@ -100,4 +93,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomePage;
+export default ProfilePage;

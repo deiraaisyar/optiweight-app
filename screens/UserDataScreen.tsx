@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -8,56 +8,63 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { RootStackParamList } from '../types'; // Import RootStackParamList
+import { RootStackParamList } from '../types';
 
-// Define RootStackParamList for navigation
-type UserDataScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserData'>;
+// Icon photo
+const photoIcon = require('../assets/images/fill_photo.webp');
+
+type UserDataScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'UserData'
+>;
 
 const UserDataScreen = () => {
-  const [fullName, setFullName] = useState<string>('');
-  const [preferredName, setPreferredName] = useState<string>('');
-  const [weight, setWeight] = useState<string>('');
-  const [gender, setGender] = useState<string>('');
-  const [dateOfBirth, setDateOfBirth] = useState<Date>(new Date());
-  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  
+  const [fullName, setFullName] = useState('');
+  const [preferredName, setPreferredName] = useState('');
+  const [weight, setWeight] = useState('');
+  const [gender, setGender] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   const navigation = useNavigation<UserDataScreenNavigationProp>();
-  
+
   useEffect(() => {
-    // Check if user is logged in
     const user = auth().currentUser;
     if (!user) {
-      // If no user is logged in, redirect to Auth screen
       navigation.replace('Auth');
       return;
     }
-    
-    // Check if user data already exists
     checkUserData(user.uid);
   }, []);
-  
+
   const checkUserData = async (userId: string) => {
     try {
       const userDoc = await firestore().collection('users').doc(userId).get();
-      
       if (userDoc.exists && userDoc.data()?.profileCompleted) {
-        // User profile is already complete, redirect to Home
         navigation.replace('Home');
       } else if (userDoc.exists) {
-        // Load existing data if available
         const userData = userDoc.data();
         if (userData?.fullName) setFullName(userData.fullName);
         if (userData?.preferredName) setPreferredName(userData.preferredName);
         if (userData?.weight) setWeight(userData.weight.toString());
         if (userData?.gender) setGender(userData.gender);
-        if (userData?.dateOfBirth) setDateOfBirth(userData.dateOfBirth.toDate());
+        if (userData?.dateOfBirth)
+          setDateOfBirth(userData.dateOfBirth.toDate());
+        if (userData?.photoUrl) setPhotoUrl(userData.photoUrl);
       }
     } catch (error) {
       console.error('Error checking user data:', error);
@@ -70,9 +77,7 @@ const UserDataScreen = () => {
     setDateOfBirth(currentDate);
   };
 
-  const showDatepicker = () => {
-    setShowDatePicker(true);
-  };
+  const showDatepicker = () => setShowDatePicker(true);
 
   const formatDate = (date: Date) => {
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
@@ -102,10 +107,43 @@ const UserDataScreen = () => {
     return true;
   };
 
-  const saveUserData = async () => {
-    if (!validateData()) {
+  const handlePhotoUpload = async () => {
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+    });
+
+    if (result.didCancel || !result.assets || !result.assets.length) {
       return;
     }
+
+    const file = result.assets[0];
+    if (!file.uri) return;
+
+    setUploading(true);
+    setPhotoUri(file.uri);
+
+    try {
+      const user = auth().currentUser;
+      if (!user) {
+        Alert.alert('Error', 'No user is logged in');
+        return;
+      }
+
+      const reference = storage().ref(`profile_photos/${user.uid}.jpg`);
+      await reference.putFile(file.uri);
+      const url = await reference.getDownloadURL();
+      setPhotoUrl(url);
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Failed to upload photo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const saveUserData = async () => {
+    if (!validateData()) return;
 
     const user = auth().currentUser;
     if (!user) {
@@ -116,15 +154,22 @@ const UserDataScreen = () => {
     setLoading(true);
 
     try {
-      await firestore().collection('users').doc(user.uid).set({
-        fullName,
-        preferredName,
-        weight: Number(weight),
-        gender,
-        dateOfBirth,
-        profileCompleted: true,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      }, {merge: true});
+      await firestore()
+        .collection('users')
+        .doc(user.uid)
+        .set(
+          {
+            fullName,
+            preferredName,
+            weight: Number(weight),
+            gender,
+            dateOfBirth,
+            photoUrl: photoUrl || 'default_photo_url', // Gunakan URL default jika tidak ada foto
+            profileCompleted: true,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
 
       setLoading(false);
       Alert.alert('Success', 'Profile updated successfully', [
@@ -134,19 +179,31 @@ const UserDataScreen = () => {
         },
       ]);
     } catch (error) {
-      setLoading(false);
       console.error('Error saving user data:', error);
+      setLoading(false);
       Alert.alert('Error', 'Failed to update profile');
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Complete Your Profile</Text>
-      <Text style={styles.subtitle}>
-        Please provide your information to continue
-      </Text>
+      <Text style={styles.title}>Fill in your personal details!</Text>
 
+      {/* Upload Photo Section */}
+      <View style={styles.photoContainer}>
+        <TouchableOpacity onPress={handlePhotoUpload}>
+          {uploading ? (
+            <ActivityIndicator size="large" color="#007AFF" />
+          ) : photoUri || photoUrl ? (
+            <Image source={{ uri: photoUri || photoUrl }} style={styles.photo} />
+          ) : (
+            <Image source={photoIcon} style={styles.photo} />
+          )}
+        </TouchableOpacity>
+        <Text style={styles.uploadText}>Upload your photo</Text>
+      </View>
+
+      {/* Full Name Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Full Name</Text>
         <TextInput
@@ -157,6 +214,7 @@ const UserDataScreen = () => {
         />
       </View>
 
+      {/* Preferred Name Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Preferred Name</Text>
         <TextInput
@@ -167,9 +225,12 @@ const UserDataScreen = () => {
         />
       </View>
 
+      {/* Date of Birth Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Date of Birth</Text>
-        <TouchableOpacity onPress={showDatepicker} style={styles.datePickerButton}>
+        <TouchableOpacity
+          onPress={showDatepicker}
+          style={styles.datePickerButton}>
           <Text style={styles.datePickerButtonText}>
             {formatDate(dateOfBirth)}
           </Text>
@@ -185,6 +246,7 @@ const UserDataScreen = () => {
         )}
       </View>
 
+      {/* Weight Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Weight (kg)</Text>
         <TextInput
@@ -196,54 +258,31 @@ const UserDataScreen = () => {
         />
       </View>
 
+      {/* Gender Selection */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Gender</Text>
         <View style={styles.genderContainer}>
-          <TouchableOpacity
-            style={[
-              styles.genderOption,
-              gender === 'male' && styles.selectedGender,
-            ]}
-            onPress={() => handleGenderSelection('male')}>
-            <Text
+          {['male', 'female', 'other'].map((g) => (
+            <TouchableOpacity
+              key={g}
               style={[
-                styles.genderText,
-                gender === 'male' && styles.selectedGenderText,
-              ]}>
-              Male
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.genderOption,
-              gender === 'female' && styles.selectedGender,
-            ]}
-            onPress={() => handleGenderSelection('female')}>
-            <Text
-              style={[
-                styles.genderText,
-                gender === 'female' && styles.selectedGenderText,
-              ]}>
-              Female
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.genderOption,
-              gender === 'other' && styles.selectedGender,
-            ]}
-            onPress={() => handleGenderSelection('other')}>
-            <Text
-              style={[
-                styles.genderText,
-                gender === 'other' && styles.selectedGenderText,
-              ]}>
-              Other
-            </Text>
-          </TouchableOpacity>
+                styles.genderOption,
+                gender === g && styles.selectedGender,
+              ]}
+              onPress={() => handleGenderSelection(g)}>
+              <Text
+                style={[
+                  styles.genderText,
+                  gender === g && styles.selectedGenderText,
+                ]}>
+                {g.charAt(0).toUpperCase() + g.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
+      {/* Continue Button */}
       <TouchableOpacity
         style={styles.continueButton}
         onPress={saveUserData}
@@ -336,6 +375,23 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  photoContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  photo: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    resizeMode: 'cover',
+  },
+  uploadText: {
+    marginTop: 8,
+    color: '#007AFF',
+    fontWeight: '500',
   },
 });
 

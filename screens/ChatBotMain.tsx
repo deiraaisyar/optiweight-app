@@ -23,7 +23,7 @@ import auth from '@react-native-firebase/auth'; // Tambahkan impor untuk Firebas
 type ChatBotMainNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatBotMain'>;
 
 type ChatMessage = {
-  sender: 'Me' | 'Optiweight AI';
+  sender: 'Me' | 'Fit Buddy';
   message: string;
 };
 
@@ -86,14 +86,14 @@ Only use relevant data, and if the question is general, provide a helpful genera
 
       const result = await model.generateContent(prompt);
       const response = result?.response?.text() || 'No response from AI.';
-      const aiMessage: ChatMessage = { sender: 'Optiweight AI', message: response };
+      const aiMessage: ChatMessage = { sender: 'Fit Buddy', message: response };
 
       setChat((prev) => [...prev, aiMessage]);
     } catch (err) {
       console.error('Error generating AI response:', err);
       setChat((prev) => [
         ...prev,
-        { sender: 'Optiweight AI', message: 'Sorry, something went wrong.' },
+        { sender: 'Fit Buddy', message: 'Sorry, something went wrong.' },
       ]);
     }
 
@@ -119,7 +119,7 @@ Only use relevant data, and if the question is general, provide a helpful genera
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Image source={BackIcon} style={styles.backIcon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Chatbox</Text>
+        <Text style={styles.headerTitle}>Fit Buddy</Text>
       </View>
 
       {/* Chat Content */}
