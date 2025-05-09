@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import AiLogo from '../assets/images/ai_logo.webp';
+import CalendarLogo from '../assets/images/calendar_icon.webp';
 import HomeIcon from '../assets/images/home_icon.webp';
 import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
@@ -18,7 +18,7 @@ import { RootStackParamList } from '../types'; // Import RootStackParamList
 
 type ChatBotLandingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatBotLanding'>;
 
-const AIChatboxScreen = ({ navigation }: { navigation: ChatBotLandingNavigationProp }) => {
+const CalendarLanding = ({ navigation }: { navigation: ChatBotLandingNavigationProp }) => {
   return (
     <View style={styles.container}>
       {/* Back Button */}
@@ -27,44 +27,49 @@ const AIChatboxScreen = ({ navigation }: { navigation: ChatBotLandingNavigationP
       </TouchableOpacity>
 
       {/* Title */}
-      <Text style={styles.title}>AI Chatbox</Text>
+      <Text style={styles.title}>Calendar</Text>
 
       {/* Logo */}
-      <Image source={AiLogo} style={[styles.logo, { width: 160, height: 160 }]} />
+      <Image source={CalendarLogo} style={[styles.logo, { width: 160, height: 160 }]} />
 
       {/* Deskripsi */}
       <Text style={styles.desc}>
-        Gain new knowledge! Interact with AI to enhance your understanding about{'\n'}
-        health, weight and workout tips.
+        Start creating your own personalized {'\n'}
+        schedule, integrating both your classes {'\n'}
+        and workout days.
       </Text>
 
-      {/* Tombol Continue */}
+      {/* Tombol Edit Calendar */}
       <TouchableOpacity
-        style={styles.button}
+        style={styles.buttonEdit}
         onPress={() => navigation.navigate('ChatBotMain')}
       >
-        <Text style={styles.buttonText}>Continue</Text>
+        <Text style={styles.buttonText}>Edit Calendar</Text>
+      </TouchableOpacity>
+
+      {/* Tombol Preview Calendar */}
+      <TouchableOpacity
+        style={styles.buttonPreview}
+        onPress={() => navigation.navigate('PreviewCalendar')} // Ganti dengan navigasi yang sesuai
+      >
+        <Text style={styles.buttonText}>Preview Calendar</Text>
       </TouchableOpacity>
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}
-          onPress={() => navigation.navigate('Library')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Library')}>
           <Image source={BookOpenIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Library</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}
-          onPress={() => navigation.navigate('Notification')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
@@ -96,6 +101,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     fontFamily: 'Inter-Bold',
+    marginBottom: 16,
   },
   logo: {
     marginVertical: 24,
@@ -107,16 +113,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     fontFamily: 'Inter-Bold',
   },
-  button: {
+  buttonEdit: {
     backgroundColor: '#007AFF',
     paddingVertical: 12,
     paddingHorizontal: 36,
     borderRadius: 999,
+    marginBottom: 12,
+    width: '65%',
+    alignItems: 'center',
+  },
+  buttonPreview: {
+    backgroundColor: '#EA761D',
+    paddingVertical: 12,
+    paddingHorizontal: 36,
+    borderRadius: 999,
     marginBottom: 24,
+    width: '65%',
+    alignItems: 'center',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
     fontFamily: 'Inter-Bold',
   },
   navbar: {
@@ -149,4 +166,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AIChatboxScreen;
+export default CalendarLanding;

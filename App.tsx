@@ -10,6 +10,9 @@ import ChatBotLandingPage from './screens/ChatBotLandingPage';
 import HomePage from './screens/HomePage';
 import ChatBotMain from './screens/ChatBotMain';
 import ProfilePage from './screens/ProfilePage';
+import CalendarLanding from './screens/CalendarLandingPage';
+import NotificiationsPage from './screens/NotificationPage';
+import CalendarMain from './screens/CalendarMain';
 
 const Stack = createNativeStackNavigator();
 
@@ -55,6 +58,21 @@ const App = () => {
         <Stack.Screen
           name="ChatBotMain"
           component={ChatBotMain}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Notification"
+          component={NotificiationsPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="CalendarLanding"
+          component={CalendarLanding}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="CalendarMain"
+          component={CalendarMain}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

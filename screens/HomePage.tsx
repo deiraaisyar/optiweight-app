@@ -245,7 +245,10 @@ const HomePage = () => {
               The journey of a thousand miles begins with a single step
             </Text>
             <TouchableOpacity style={styles.scheduleButton}>
-              <Text style={styles.buttonText}>Start personalized schedule</Text>
+              <Text style={styles.buttonText}
+              onPress={() => navigation.navigate('CalendarLanding')}>
+              Start personalized schedule
+              </Text>
             </TouchableOpacity>
           </View>
           <View style={styles.calendarIconContainer}>
@@ -282,15 +285,21 @@ const HomePage = () => {
   
       {/* Navbar tetap di bawah */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+        style={styles.navItem}
+        onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+        style={styles.navItem}
+        onPress={() => navigation.navigate('Library')}>
           <Image source={BookOpenIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Library</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+        style={styles.navItem}
+        onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
