@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import firestore from '@react-native-firebase/firestore';
-import { CALENDAR_API_KEY } from '@env';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 import HomeIcon from '../assets/images/home_icon.webp';
@@ -32,8 +31,7 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
-
-  const GOOGLE_CALENDAR_API_URL = `https://www.googleapis.com/calendar/v3/calendars/primary/events?key=${CALENDAR_API_KEY}`;
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false); // State untuk notifikasi sukses
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -65,7 +63,7 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`, // Gunakan token akses
+          Authorization: `Bearer ${accessToken}`, // Sertakan token akses
         },
         body: JSON.stringify({
           summary: eventTitle,
@@ -98,6 +96,11 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
       setStartTime(null);
       setEndTime(null);
       setEventType(null);
+
+      // Tampilkan notifikasi sukses
+      setShowSuccessNotification(true);
+      setTimeout(() => setShowSuccessNotification(false), 3000); // Sembunyikan notifikasi setelah 3 detik
+
       Alert.alert('Success', 'Event added successfully!');
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -128,7 +131,7 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
     try {
       const userInfo = await GoogleSignin.signIn();
       const tokens = await GoogleSignin.getTokens();
-      console.log('Access Token:', tokens.accessToken); // Log token akses
+      console.log('Access Token:', tokens.accessToken);
       return tokens.accessToken;
     } catch (error) {
       console.error('Error getting access token:', error);
@@ -142,6 +145,15 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
 
   return (
     <View style={styles.container}>
+      {/* Notifikasi Sukses */}
+      {showSuccessNotification && (
+        <View style={styles.successNotification}>
+          <Text style={styles.successNotificationText}>
+            Event successfully added to calendar ✅
+          </Text>
+        </View>
+      )}
+
       {/* Day Selector */}
       <Text style={styles.title}>Calendar</Text>
       <Text style={styles.subtitle}>Press which day to add to your calendar!</Text>
@@ -161,6 +173,28 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Event List */}
+      {!selectedDay && (
+        <>
+          <Text style={styles.sectionTitle}>Your Events This Week</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#007AFF" />
+          ) : (
+            <FlatList
+              data={events} // Tampilkan semua event di minggu ini
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.eventCard}>
+                  <Text style={styles.eventCardText}>
+                    {item.day} - {item.type}: {item.title} ({item.start} - {item.end})
+                  </Text>
+                </View>
+              )}
+            />
+          )}
+        </>
+      )}
 
       {/* Event Form */}
       {selectedDay && (
@@ -252,24 +286,6 @@ const CalendarMain = ({ navigation }: { navigation: any }) => {
         </>
       )}
 
-      {/* Event List */}
-      <Text style={styles.sectionTitle}>Your Events</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#007AFF" />
-      ) : (
-        <FlatList
-          data={events.filter((event) => event.day === selectedDay)} // Filter event berdasarkan hari yang dipilih
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.eventCard}>
-              <Text style={styles.eventCardText}>
-                {item.day} - {item.type}: {item.title} ({item.start} - {item.end})
-              </Text>
-            </View>
-          )}
-        />
-      )}
-
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
@@ -298,6 +314,17 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
+  },
+  successNotification: {
+    backgroundColor: '#E3FCEC',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  successNotificationText: {
+    color: '#2E7D32',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   title: {
     fontSize: 24,
