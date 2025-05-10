@@ -21,6 +21,7 @@ import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 import KananIcon from '../assets/images/button_kanan.webp';
+import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 
 import {Picker} from '@react-native-picker/picker';
 
@@ -324,19 +325,19 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Library')}>
-          <Image source={BookOpenIcon} style={styles.navIcon} />
-          <Text style={styles.navText}>Library</Text>
+          onPress={() => navigation.navigate('ChatBotLanding')}>
+          <Image source={BubbleChatIcon} style={styles.navIcon} />
+          <Text style={styles.navText}>AI Chatbot</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
@@ -344,7 +345,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}>
+          onPress={() => navigation.navigate('ProfileLanding')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>

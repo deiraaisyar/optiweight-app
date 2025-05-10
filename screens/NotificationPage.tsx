@@ -81,21 +81,27 @@ const NotificationPage = () => {
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-                style={styles.navItem}
-                onPress={() => navigation.navigate('ChatBotLanding')}>
-                  <Image source={BubbleChatIcon} style={styles.navIcon} />
-                  <Text style={styles.navText}>AI Chatbot</Text>
-                </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Notification')}>
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ChatBotLanding')}>
+          <Image source={BubbleChatIcon} style={styles.navIcon} />
+          <Text style={styles.navText}>AI Chatbot</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ProfileLanding')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>

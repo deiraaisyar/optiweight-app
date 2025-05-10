@@ -184,19 +184,19 @@ const ProfileScreen = () => {
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('ChatBotLanding')}>
           <Image source={BubbleChatIcon} style={styles.navIcon} />
           <Text style={styles.navText}>AI Chatbot</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
@@ -204,7 +204,7 @@ const ProfileScreen = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}>
+          onPress={() => navigation.navigate('ProfileLanding')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
@@ -360,10 +360,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   navItems: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -373,11 +369,35 @@ const styles = StyleSheet.create({
   //   height: 24,
   //   marginBottom: 4,
   // },
+  navbar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 35,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    backgroundColor: '#B7E1FF',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIcon: {
+    width: 24,
+    height: 24,
+    marginBottom: 4,
+  },
   navText: {
     fontSize: 11,
     color: '#333',
     fontFamily: 'Inter-Regular',
   },
+
 });
 
 export default ProfileScreen;

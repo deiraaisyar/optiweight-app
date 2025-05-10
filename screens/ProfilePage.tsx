@@ -104,7 +104,7 @@ const ProfileScreen = () => {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
-          onPress={() => navigation.navigate('Home')}>
+          onPress={() => navigation.navigate('ProfileLanding')}>
           {/* <Text style={styles.infoValue}>Back</Text> */}
           <Image source={BackIcon} style={styles.navIcon} />
         </TouchableOpacity>

@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   Image, 
   ActivityIndicator, 
-  ScrollView 
+  ScrollView,
+  Alert 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,6 +32,10 @@ type UserData = {
   weight: number;
   gender: string;
   profileCompleted: boolean;
+  streakCount?: number;
+  weeklyWorkouts?: number;
+  streakHistory?: number[];
+  lastStreakUpdate?: any;
 };
 
 type WorkoutEvent = {
@@ -40,6 +45,7 @@ type WorkoutEvent = {
   title: string;
   start: string;
   end: string;
+  completed?: boolean;
 };
 
 const CalendarIcon = () => <Text style={{fontSize: 28}}>📅</Text>;
@@ -53,6 +59,7 @@ const HomePage = () => {
   const [currentStreakActive, setCurrentStreakActive] = useState<boolean>(false);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<number>(0);
   const [streakHistory, setStreakHistory] = useState<number[]>([0, 0, 0, 0]);
+  const [lastWorkoutDate, setLastWorkoutDate] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -75,13 +82,61 @@ const HomePage = () => {
         if (data.dateOfBirth && typeof data.dateOfBirth.toDate === 'function') {
           data.dateOfBirth = data.dateOfBirth.toDate();
         }
+
+        if (data.lastStreakUpdate && typeof data.lastStreakUpdate.toDate === 'function') {
+          data.lastStreakUpdate = data.lastStreakUpdate.toDate();
+          setLastWorkoutDate(data.lastStreakUpdate);
+        }
         
         setUserData(data);
+        setStreakCount(data.streakCount || 0);
+        setWeeklyWorkouts(data.weeklyWorkouts || 0);
+        setStreakHistory(data.streakHistory || [0, 0, 0, 0]);
+
+        // Check if streak needs to be reset
+        checkStreakReset(data.lastStreakUpdate);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkStreakReset = (lastUpdate: Date | null) => {
+    if (!lastUpdate) return;
+
+    const now = new Date();
+    const lastUpdateDate = new Date(lastUpdate);
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset streak if last workout was before yesterday
+    if (lastUpdateDate < yesterday) {
+      resetStreak();
+    }
+  };
+
+  const resetStreak = async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    try {
+      await firestore().collection('users').doc(currentUser.uid).update({
+        streakCount: 0,
+        lastStreakUpdate: null
+      });
+      setStreakCount(0);
+      
+      // Update streak history
+      const newStreakHistory = [...streakHistory];
+      newStreakHistory.shift();
+      newStreakHistory.push(0);
+      setStreakHistory(newStreakHistory);
+      
+      Alert.alert('Streak Reset', 'You missed your workout yesterday. Streak has been reset to 0.');
+    } catch (error) {
+      console.error('Error resetting streak:', error);
     }
   };
 
@@ -94,13 +149,13 @@ const HomePage = () => {
 
       const events = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        completed: doc.data().completed || false
       })) as WorkoutEvent[];
 
       setWorkoutEvents(events);
       checkCurrentStreak(events);
       calculateWeeklyWorkouts(events);
-      updateStreakHistory();
     } catch (error) {
       console.error('Error fetching workout events:', error);
     }
@@ -118,7 +173,7 @@ const HomePage = () => {
       const startTime = new Date(event.start);
       const endTime = new Date(event.end);
       
-      if (now >= startTime && now <= endTime) {
+      if (now >= startTime && now <= endTime && !event.completed) {
         setCurrentStreakActive(true);
         return;
       }
@@ -128,21 +183,74 @@ const HomePage = () => {
   };
 
   const calculateWeeklyWorkouts = (events: WorkoutEvent[]) => {
-    // Count unique workout days in the current week
-    const uniqueDays = new Set(events.map(event => event.day));
+    const completedWorkouts = events.filter(event => event.completed);
+    const uniqueDays = new Set(completedWorkouts.map(event => event.day));
     setWeeklyWorkouts(uniqueDays.size);
   };
 
-  const updateStreakHistory = () => {
-    // Simulate streak history for the last 4 weeks
-    // In a real app, you would fetch this from your database
-    setStreakHistory([3, 5, 2, 4]); // Example data
+  const updateStreakInDatabase = async (newStreakCount: number) => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    try {
+      const now = new Date();
+      await firestore().collection('users').doc(currentUser.uid).update({
+        streakCount: newStreakCount,
+        lastStreakUpdate: now
+      });
+      setLastWorkoutDate(now);
+    } catch (error) {
+      console.error('Error updating streak:', error);
+    }
   };
 
-  const handleStreakPress = () => {
+  const handleStreakPress = async () => {
     if (currentStreakActive) {
-      setStreakCount(prev => prev + 1);
-      // Here you would also update the streak in your database
+      const newStreakCount = streakCount + 1;
+      setStreakCount(newStreakCount);
+      
+      // Update streak history
+      const newStreakHistory = [...streakHistory];
+      newStreakHistory.shift();
+      newStreakHistory.push(newStreakCount);
+      setStreakHistory(newStreakHistory);
+      
+      // Update in database
+      await updateStreakInDatabase(newStreakCount);
+      
+      // Mark workout as completed
+      await markWorkoutAsCompleted();
+      
+      Alert.alert('Streak Updated', `Your streak is now ${newStreakCount} days!`);
+    }
+  };
+
+  const markWorkoutAsCompleted = async () => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const todayName = dayNames[currentDay];
+
+    try {
+      // Find today's workout event
+      const todayWorkout = workoutEvents.find(event => 
+        event.day === todayName && 
+        now >= new Date(event.start) && 
+        now <= new Date(event.end) &&
+        !event.completed
+      );
+
+      if (todayWorkout) {
+        await firestore()
+          .collection('events')
+          .doc(todayWorkout.id)
+          .update({ completed: true });
+          
+        // Refresh workout events
+        fetchWorkoutEvents();
+      }
+    } catch (error) {
+      console.error('Error marking workout as completed:', error);
     }
   };
 
@@ -194,49 +302,6 @@ const HomePage = () => {
             <Text style={styles.statLabel}>Streak</Text>
           </View>
         </View>
-
-        {/* Streak Graph */}
-        <View style={styles.graphContainer}>
-          <Text style={styles.graphTitle}>April 2025</Text>
-          <Text style={styles.graphSubtitle}>Weekly Streak, Keep it up!</Text>
-          
-          <LineChart
-            data={{
-              labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-              datasets: [
-                {
-                  data: streakHistory,
-                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                  strokeWidth: 2
-                }
-              ]
-            }}
-            width={Dimensions.get('window').width - 40}
-            height={220}
-            yAxisInterval={1}
-            chartConfig={{
-              backgroundColor: "#ffffff",
-              backgroundGradientFrom: "#ffffff",
-              backgroundGradientTo: "#ffffff",
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              style: {
-                borderRadius: 16
-              },
-              propsForDots: {
-                r: "6",
-                strokeWidth: "2",
-                stroke: "#3b82f6"
-              }
-            }}
-            bezier
-            style={{
-              marginVertical: 8,
-              borderRadius: 16
-            }}
-          />
-        </View>
   
         <View style={styles.scheduleCard}>
           <View style={styles.scheduleContent}>
@@ -279,6 +344,49 @@ const HomePage = () => {
               small, is a step toward a stronger body and a clearer mind."
             </Text>
           </View>
+        </View>
+
+        {/* Streak Graph */}
+        <View style={styles.graphContainer}>
+          <Text style={styles.graphTitle}>April 2025</Text>
+          <Text style={styles.graphSubtitle}>Weekly Streak, Keep it up!</Text>
+          
+          <LineChart
+            data={{
+              labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+              datasets: [
+                {
+                  data: streakHistory,
+                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  strokeWidth: 2
+                }
+              ]
+            }}
+            width={Dimensions.get('window').width - 40}
+            height={220}
+            yAxisInterval={1}
+            chartConfig={{
+              backgroundColor: "#ffffff",
+              backgroundGradientFrom: "#ffffff",
+              backgroundGradientTo: "#ffffff",
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16
+              },
+              propsForDots: {
+                r: "6",
+                strokeWidth: "2",
+                stroke: "#3b82f6"
+              }
+            }}
+            bezier
+            style={{
+              marginVertical: 8,
+              borderRadius: 16
+            }}
+          />
         </View>
       </ScrollView>
   

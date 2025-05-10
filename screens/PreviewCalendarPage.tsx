@@ -9,6 +9,7 @@ import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 import CalendarIcon from '../assets/images/calendar_icon.webp';
 import BackIcon from '../assets/images/back_button.webp';
+import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 
 const getWeekDates = () => {
   const today = new Date();
@@ -188,19 +189,27 @@ const PreviewCalendarPage = () => {
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Library')}>
-          <Image source={BookOpenIcon} style={styles.navIcon} />
-          <Text style={styles.navText}>Library</Text>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ChatBotLanding')}>
+          <Image source={BubbleChatIcon} style={styles.navIcon} />
+          <Text style={styles.navText}>AI Chatbot</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Notification')}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ProfileLanding')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
