@@ -42,7 +42,7 @@ const CalendarLanding = ({ navigation }: { navigation: ChatBotLandingNavigationP
       {/* Tombol Edit Calendar */}
       <TouchableOpacity
         style={styles.buttonEdit}
-        onPress={() => navigation.navigate('ChatBotMain')}
+        onPress={() => navigation.navigate('CalendarMain')} // Ganti dengan navigasi yang sesuai
       >
         <Text style={styles.buttonText}>Edit Calendar</Text>
       </TouchableOpacity>

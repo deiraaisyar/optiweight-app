@@ -1,59 +1,274 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  TextInput,
+  FlatList,
+  Alert,
+  ActivityIndicator,
   Image,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import firestore from '@react-native-firebase/firestore';
+import { CALENDAR_API_KEY } from '@env';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-import CalendarLogo from '../assets/images/calendar_icon.webp';
 import HomeIcon from '../assets/images/home_icon.webp';
 import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
-import BackIcon from '../assets/images/back_button.webp';
-import { RootStackParamList } from '../types'; // Import RootStackParamList
 
-type ChatBotLandingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatBotLanding'>;
+const CalendarMain = ({ navigation }: { navigation: any }) => {
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [eventType, setEventType] = useState<'Classes' | 'Workout' | null>(null);
+  const [eventTitle, setEventTitle] = useState<string>('');
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [events, setEvents] = useState<
+    { id: string; day: string; type: string; title: string; start: string; end: string }[]
+  >([]);
+  const [loading, setLoading] = useState(false);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
-const CalendarMain = ({ navigation }: { navigation: ChatBotLandingNavigationProp }) => {
+  const GOOGLE_CALENDAR_API_URL = `https://www.googleapis.com/calendar/v3/calendars/primary/events?key=${CALENDAR_API_KEY}`;
+
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const handleAddEvent = async () => {
+    if (!selectedDay || !eventType || !eventTitle || !startTime || !endTime) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    const newEvent = {
+      day: selectedDay,
+      type: eventType,
+      title: eventTitle,
+      start: startTime.toISOString(),
+      end: endTime.toISOString(),
+    };
+
+    try {
+      setLoading(true);
+
+      // Simpan ke Firestore
+      const firestoreResponse = await firestore().collection('events').add(newEvent);
+
+      // Dapatkan token OAuth 2.0
+      const accessToken = await getAccessToken();
+
+      // Tambahkan ke Google Calendar
+      const googleResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`, // Gunakan token akses
+        },
+        body: JSON.stringify({
+          summary: eventTitle,
+          start: {
+            dateTime: startTime.toISOString(),
+            timeZone: 'Asia/Jakarta',
+          },
+          end: {
+            dateTime: endTime.toISOString(),
+            timeZone: 'Asia/Jakarta',
+          },
+        }),
+      });
+
+      const responseData = await googleResponse.json();
+      console.log('Google Calendar Response:', responseData);
+
+      if (!googleResponse.ok) {
+        throw new Error(`Failed to save event: ${responseData.error.message}`);
+      }
+
+      // Tambahkan ke state lokal
+      setEvents((prevEvents) => [
+        ...prevEvents,
+        { id: firestoreResponse.id, ...newEvent },
+      ]);
+
+      // Reset form
+      setEventTitle('');
+      setStartTime(null);
+      setEndTime(null);
+      setEventType(null);
+      Alert.alert('Success', 'Event added successfully!');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+
+      const firestoreEvents = await firestore().collection('events').get();
+      const eventsFromFirestore = firestoreEvents.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setEvents(eventsFromFirestore);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAccessToken = async () => {
+    try {
+      const userInfo = await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+      console.log('Access Token:', tokens.accessToken); // Log token akses
+      return tokens.accessToken;
+    } catch (error) {
+      console.error('Error getting access token:', error);
+      throw new Error('Failed to get access token');
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
   return (
     <View style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Image source={BackIcon} style={styles.backIcon} />
-      </TouchableOpacity>
-
-      {/* Title */}
+      {/* Day Selector */}
       <Text style={styles.title}>Calendar</Text>
+      <Text style={styles.subtitle}>Press which day to add to your calendar!</Text>
+      <View style={styles.daySelector}>
+        {days.map((day) => (
+          <TouchableOpacity
+            key={day}
+            style={[
+              styles.dayButton,
+              selectedDay === day && styles.dayButtonSelected,
+            ]}
+            onPress={() => setSelectedDay(day)}
+          >
+            <Text style={selectedDay === day ? styles.dayTextSelected : styles.dayText}>
+              {day}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      {/* Logo */}
-      <Image source={CalendarLogo} style={[styles.logo, { width: 160, height: 160 }]} />
+      {/* Event Form */}
+      {selectedDay && (
+        <>
+          <Text style={styles.sectionTitle}>{selectedDay}</Text>
+          <View style={styles.eventTypeSelector}>
+            <TouchableOpacity
+              style={[
+                styles.eventTypeButton,
+                eventType === 'Classes' && styles.eventTypeButtonSelected,
+              ]}
+              onPress={() => setEventType('Classes')}
+            >
+              <Text
+                style={
+                  eventType === 'Classes' ? styles.eventTypeTextSelected : styles.eventTypeText
+                }
+              >
+                Classes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.eventTypeButton,
+                eventType === 'Workout' && styles.eventTypeButtonSelected,
+              ]}
+              onPress={() => setEventType('Workout')}
+            >
+              <Text
+                style={
+                  eventType === 'Workout' ? styles.eventTypeTextSelected : styles.eventTypeText
+                }
+              >
+                Workout
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Deskripsi */}
-      <Text style={styles.desc}>
-        Start creating your own personalized {'\n'}
-        schedule, integrating both your classes {'\n'}
-        and workout days.
-      </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Event title"
+            value={eventTitle}
+            onChangeText={setEventTitle}
+          />
 
-      {/* Tombol Edit Calendar */}
-      <TouchableOpacity
-        style={styles.buttonEdit}
-        onPress={() => navigation.navigate('ChatBotMain')}
-      >
-        <Text style={styles.buttonText}>Edit Calendar</Text>
-      </TouchableOpacity>
+          {/* Start Time Picker */}
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowStartPicker(true)}
+          >
+            <Text>{startTime ? startTime.toLocaleTimeString() : 'Select Start Time'}</Text>
+          </TouchableOpacity>
+          {showStartPicker && (
+            <DateTimePicker
+              value={startTime || new Date()}
+              mode="time"
+              is24Hour={true}
+              display="default"
+              onChange={(event, date) => {
+                setShowStartPicker(false);
+                if (date) setStartTime(date);
+              }}
+            />
+          )}
 
-      {/* Tombol Preview Calendar */}
-      <TouchableOpacity
-        style={styles.buttonPreview}
-        onPress={() => navigation.navigate('PreviewCalendar')} // Ganti dengan navigasi yang sesuai
-      >
-        <Text style={styles.buttonText}>Preview Calendar</Text>
-      </TouchableOpacity>
+          {/* End Time Picker */}
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowEndPicker(true)}
+          >
+            <Text>{endTime ? endTime.toLocaleTimeString() : 'Select End Time'}</Text>
+          </TouchableOpacity>
+          {showEndPicker && (
+            <DateTimePicker
+              value={endTime || new Date()}
+              mode="time"
+              is24Hour={true}
+              display="default"
+              onChange={(event, date) => {
+                setShowEndPicker(false);
+                if (date) setEndTime(date);
+              }}
+            />
+          )}
+
+          <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
+            <Text style={styles.addButtonText}>Add</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {/* Event List */}
+      <Text style={styles.sectionTitle}>Your Events</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#007AFF" />
+      ) : (
+        <FlatList
+          data={events.filter((event) => event.day === selectedDay)} // Filter event berdasarkan hari yang dipilih
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.eventCard}>
+              <Text style={styles.eventCardText}>
+                {item.day} - {item.type}: {item.title} ({item.start} - {item.end})
+              </Text>
+            </View>
+          )}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
@@ -81,60 +296,95 @@ const CalendarMain = ({ navigation }: { navigation: ChatBotLandingNavigationProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
     backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    zIndex: 10,
-  },
-  backIcon: {
-    width: 24,
-    height: 24,
   },
   title: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontFamily: 'Inter-Bold',
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  logo: {
-    marginVertical: 24,
-  },
-  desc: {
+  subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#444',
-    marginBottom: 24,
-    fontFamily: 'Inter-Bold',
+    marginBottom: 20,
+    color: '#555',
   },
-  buttonEdit: {
+  daySelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  dayButton: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#f0f0f0',
+  },
+  dayButtonSelected: {
     backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 36,
-    borderRadius: 999,
-    marginBottom: 12,
-    width: '65%',
-    alignItems: 'center',
   },
-  buttonPreview: {
-    backgroundColor: '#EA761D',
-    paddingVertical: 12,
-    paddingHorizontal: 36,
-    borderRadius: 999,
-    marginBottom: 24,
-    width: '65%',
-    alignItems: 'center',
+  dayText: {
+    color: '#555',
   },
-  buttonText: {
+  dayTextSelected: {
     color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Inter-Bold',
+    fontWeight: 'bold',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  eventTypeSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  eventTypeButton: {
+    flex: 1,
+    padding: 10,
+    marginHorizontal: 5,
+    borderRadius: 5,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  eventTypeButtonSelected: {
+    backgroundColor: '#007AFF',
+  },
+  eventTypeText: {
+    color: '#555',
+  },
+  eventTypeTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  eventCard: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 10,
+  },
+  eventCardText: {
+    color: '#333',
   },
   navbar: {
     flexDirection: 'row',

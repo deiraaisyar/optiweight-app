@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 import AuthScreen from './screens/AuthScreenTest';
 import LandingScreen from './screens/LandingScreen';
@@ -13,8 +14,15 @@ import ProfilePage from './screens/ProfilePage';
 import CalendarLanding from './screens/CalendarLandingPage';
 import NotificiationsPage from './screens/NotificationPage';
 import CalendarMain from './screens/CalendarMain';
+import PreviewCalendar from './screens/PreviewCalendarPage';
 
 const Stack = createNativeStackNavigator();
+
+GoogleSignin.configure({
+  scopes: ['https://www.googleapis.com/auth/calendar'], // Izin untuk mengakses Google Calendar
+  webClientId: 'YOUR_WEB_CLIENT_ID', // Ganti dengan Web Client ID dari Firebase Console
+  offlineAccess: true, // Untuk mendapatkan refresh token
+});
 
 const App = () => {
   return (
@@ -73,6 +81,11 @@ const App = () => {
         <Stack.Screen
           name="CalendarMain"
           component={CalendarMain}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PreviewCalendar"
+          component={PreviewCalendar}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
