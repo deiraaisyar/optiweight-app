@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, ScrollView} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../types'; // Import RootStackParamList
-// import {useNavigation} from '@react-navigation/native';
-// import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Image, 
+  ActivityIndicator, 
+  ScrollView 
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-// import BackIcon from '../assets/images/button_revised.webp';
+import { LineChart } from 'react-native-chart-kit';
+import { Dimensions } from 'react-native';
 
 // Import ikon untuk navbar
 import HomeIcon from '../assets/images/home_icon.webp';
@@ -15,38 +22,47 @@ import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 
-type HomePageNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Home'
->;
-// User data type definition
+type HomePageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
 type UserData = {
   fullName: string;
   preferredName: string;
-  dateOfBirth: any; // Using any for Firestore timestamp
+  dateOfBirth: any;
   weight: number;
   gender: string;
   profileCompleted: boolean;
+};
+
+type WorkoutEvent = {
+  id: string;
+  day: string;
+  type: string;
+  title: string;
+  start: string;
+  end: string;
 };
 
 const CalendarIcon = () => <Text style={{fontSize: 28}}>📅</Text>;
 
 const HomePage = () => {
   const navigation = useNavigation<HomePageNavigationProp>();
-
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const navigationzz = useNavigation<ProfileScreenNavigationProp>();
+  const [streakCount, setStreakCount] = useState<number>(0);
+  const [workoutEvents, setWorkoutEvents] = useState<WorkoutEvent[]>([]);
+  const [currentStreakActive, setCurrentStreakActive] = useState<boolean>(false);
+  const [weeklyWorkouts, setWeeklyWorkouts] = useState<number>(0);
+  const [streakHistory, setStreakHistory] = useState<number[]>([0, 0, 0, 0]);
 
   useEffect(() => {
     fetchUserData();
+    fetchWorkoutEvents();
   }, []);
 
   const fetchUserData = async () => {
     const currentUser = auth().currentUser;
     if (!currentUser) {
-      // If no user is logged in, redirect to Auth screen
-      navigationzz.replace('Auth');
+      navigation.replace('Auth');
       return;
     }
 
@@ -56,40 +72,77 @@ const HomePage = () => {
       if (userDoc.exists) {
         const data = userDoc.data() as UserData;
         
-        // Convert Firestore timestamp to Date if it exists
         if (data.dateOfBirth && typeof data.dateOfBirth.toDate === 'function') {
           data.dateOfBirth = data.dateOfBirth.toDate();
         }
         
         setUserData(data);
-      } else {
-        Alert.alert('Profile Incomplete', 'Please complete your profile information.');
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      Alert.alert('Error', 'Failed to load profile data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date ? `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}` : 'Not specified';
-  };
-
-  const handleEditProfile = () => {
-    // Navigate to edit profile screen
-    // You can create this screen later
-    navigationzz.navigate('EditProfile');
-  };
-
-  const handleSignOut = async () => {
+  const fetchWorkoutEvents = async () => {
     try {
-      await auth().signOut();
-      navigation.replace('Auth');
+      const snapshot = await firestore()
+        .collection('events')
+        .where('type', '==', 'Workout')
+        .get();
+
+      const events = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as WorkoutEvent[];
+
+      setWorkoutEvents(events);
+      checkCurrentStreak(events);
+      calculateWeeklyWorkouts(events);
+      updateStreakHistory();
     } catch (error) {
-      console.error('Error signing out:', error);
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      console.error('Error fetching workout events:', error);
+    }
+  };
+
+  const checkCurrentStreak = (events: WorkoutEvent[]) => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const todayName = dayNames[currentDay];
+
+    const todayWorkouts = events.filter(event => event.day === todayName);
+
+    for (const event of todayWorkouts) {
+      const startTime = new Date(event.start);
+      const endTime = new Date(event.end);
+      
+      if (now >= startTime && now <= endTime) {
+        setCurrentStreakActive(true);
+        return;
+      }
+    }
+
+    setCurrentStreakActive(false);
+  };
+
+  const calculateWeeklyWorkouts = (events: WorkoutEvent[]) => {
+    // Count unique workout days in the current week
+    const uniqueDays = new Set(events.map(event => event.day));
+    setWeeklyWorkouts(uniqueDays.size);
+  };
+
+  const updateStreakHistory = () => {
+    // Simulate streak history for the last 4 weeks
+    // In a real app, you would fetch this from your database
+    setStreakHistory([3, 5, 2, 4]); // Example data
+  };
+
+  const handleStreakPress = () => {
+    if (currentStreakActive) {
+      setStreakCount(prev => prev + 1);
+      // Here you would also update the streak in your database
     }
   };
 
@@ -101,116 +154,11 @@ const HomePage = () => {
     );
   }
 
-  // return (
-  //   <View style={styles.container}>
-  //     <View style={styles.header}>
-  //       <Text style={styles.welcomeText}>Welcome Back!</Text>
-  //     </View>
-
-  //     <View style={styles.profileSection}>
-  //       <View style={styles.avatarContainer}>
-  //         <View style={styles.avatar}>
-  //           <Text style={styles.avatarText}>
-  //             {userData?.preferredName ? userData.preferredName.charAt(0).toUpperCase() : 'U'}
-  //           </Text>
-  //         </View>
-  //         {/* <Text style={styles.userName}>{userData?.preferredName || 'User'}</Text>
-  //         <Text style={styles.userEmail}>{auth().currentUser?.email}</Text> */}
-  //       </View>
-  //     </View>
-
-  //     <View style={styles.statsContainer}>
-  //       {/* Weekly Workout Stat */}
-  //       <View style={styles.statItem}>
-  //         <View style={[styles.statCircle, styles.workoutCircle]}>
-  //           <Text style={[styles.statNumber, styles.workoutNumber]}>asep</Text>
-  //         </View>
-  //         <Text style={styles.statLabel}>Weekly Workout</Text>
-  //       </View>
-
-  //       {/* Streak Stat */}
-  //       <View style={styles.statItem}>
-  //         <View style={[styles.statCircle, styles.streakCircle]}>
-  //           <Text style={[styles.statNumber, styles.streakNumber]}>asep</Text>
-  //         </View>
-  //         <Text style={styles.statLabel}>Streak</Text>
-  //       </View>
-  //     </View>
-
-  //     <View style={styles.scheduleCard}>
-  //       <View style={styles.scheduleContent}>
-  //         <Text style={styles.cardTitle}>
-  //           Set up your personalized workout schedule!
-  //         </Text>
-  //         <Text style={styles.cardSubtitle}>
-  //           The journey of a thousand miles begins with a single step
-  //         </Text>
-  //         <TouchableOpacity style={styles.scheduleButton}>
-  //           <Text style={styles.buttonText}>Start personalized schedule</Text>
-  //         </TouchableOpacity>
-  //       </View>
-  //       <View style={styles.calendarIconContainer}>
-  //         <CalendarIcon />
-  //       </View>
-  //     </View>
-
-  //     {/* Info Cards Section */}
-  //     <View style={styles.infoCardsContainer}>
-  //       {/* AI Chatbox Card */}
-  //       <View style={styles.infoCard}>
-  //         <Text style={styles.cardTitle}>AI Chatbox</Text>
-  //         <Text style={styles.cardSubtitle}>Have a conversation with me!</Text>
-  //         <Text style={styles.cardDescription}>
-  //           The AI Chatbox provides users a platform to gain new knowledge
-  //           tailored to reach their goals.
-  //         </Text>
-  //         <TouchableOpacity style={styles.chatButton}>
-  //           <Text
-  //             style={styles.buttonText}
-  //             onPress={() => navigation.navigate('ChatBotLanding')}>
-  //             Visit AI Chatbox
-  //           </Text>
-  //         </TouchableOpacity>
-  //       </View>
-
-  //       {/* Motivational Quote Card */}
-  //       <View style={styles.infoCard}>
-  //         <Text style={styles.quoteText}>
-  //           "A healthy weight isn't about perfection or restrictions. It's about
-  //           balance, strength, and self-respect. Every workout, no matter how
-  //           small, is a step toward a stronger body and a clearer mind." 
-  //         </Text>
-  //       </View>
-  //     </View>
-
-  //     {/* Bottom Navigation */}
-  //     <View style={styles.navbar}>
-  //       <TouchableOpacity style={styles.navItem}>
-  //         <Image source={HomeIcon} style={styles.navIcon} />
-  //         <Text style={styles.navText}>Home</Text>
-  //       </TouchableOpacity>
-  //       <TouchableOpacity style={styles.navItem}>
-  //         <Image source={BookOpenIcon} style={styles.navIcon} />
-  //         <Text style={styles.navText}>Library</Text>
-  //       </TouchableOpacity>
-  //       <TouchableOpacity style={styles.navItem}>
-  //         <Image source={NotificationIcon} style={styles.navIcon} />
-  //         <Text style={styles.navText}>Notification</Text>
-  //       </TouchableOpacity>
-  //       <TouchableOpacity
-  //         style={styles.navItem}
-  //         onPress={() => navigation.navigate('Profile')}>
-  //         <Image source={UserIcon} style={styles.navIcon} />
-  //         <Text style={styles.navText}>Profile</Text>
-  //       </TouchableOpacity>
-  //     </View>
-  //   </View>
-  // );
   return (
     <View style={{flex: 1, backgroundColor: '#fff'}}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.welcomeText}>Welcome Back!</Text>
+          <Text style={styles.welcomeText}>Welcome Back {userData?.preferredName || 'User'}!</Text>
         </View>
   
         <View style={styles.profileSection}>
@@ -226,16 +174,68 @@ const HomePage = () => {
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <View style={[styles.statCircle, styles.workoutCircle]}>
-              <Text style={[styles.statNumber, styles.workoutNumber]}>asep</Text>
+              <Text style={[styles.statNumber, styles.workoutNumber]}>{weeklyWorkouts}</Text>
             </View>
             <Text style={styles.statLabel}>Weekly Workout</Text>
           </View>
+          
           <View style={styles.statItem}>
-            <View style={[styles.statCircle, styles.streakCircle]}>
-              <Text style={[styles.statNumber, styles.streakNumber]}>asep</Text>
-            </View>
+            <TouchableOpacity 
+              onPress={handleStreakPress}
+              style={[
+                styles.statCircle, 
+                currentStreakActive ? styles.activeStreakCircle : styles.inactiveStreakCircle
+              ]}
+            >
+              <Text style={[styles.statNumber, currentStreakActive ? styles.activeStreakNumber : styles.inactiveStreakNumber]}>
+                {streakCount}
+              </Text>
+            </TouchableOpacity>
             <Text style={styles.statLabel}>Streak</Text>
           </View>
+        </View>
+
+        {/* Streak Graph */}
+        <View style={styles.graphContainer}>
+          <Text style={styles.graphTitle}>April 2025</Text>
+          <Text style={styles.graphSubtitle}>Weekly Streak, Keep it up!</Text>
+          
+          <LineChart
+            data={{
+              labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+              datasets: [
+                {
+                  data: streakHistory,
+                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  strokeWidth: 2
+                }
+              ]
+            }}
+            width={Dimensions.get('window').width - 40}
+            height={220}
+            yAxisInterval={1}
+            chartConfig={{
+              backgroundColor: "#ffffff",
+              backgroundGradientFrom: "#ffffff",
+              backgroundGradientTo: "#ffffff",
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16
+              },
+              propsForDots: {
+                r: "6",
+                strokeWidth: "2",
+                stroke: "#3b82f6"
+              }
+            }}
+            bezier
+            style={{
+              marginVertical: 8,
+              borderRadius: 16
+            }}
+          />
         </View>
   
         <View style={styles.scheduleCard}>
@@ -245,9 +245,8 @@ const HomePage = () => {
               The journey of a thousand miles begins with a single step
             </Text>
             <TouchableOpacity style={styles.scheduleButton}>
-              <Text style={styles.buttonText}
-              onPress={() => navigation.navigate('CalendarLanding')}>
-              Start personalized schedule
+              <Text style={styles.buttonText} onPress={() => navigation.navigate('CalendarLanding')}>
+                Start personalized schedule
               </Text>
             </TouchableOpacity>
           </View>
@@ -277,29 +276,29 @@ const HomePage = () => {
             <Text style={styles.quoteText}>
               "A healthy weight isn't about perfection or restrictions. It's about
               balance, strength, and self-respect. Every workout, no matter how
-              small, is a step toward a stronger body and a clearer mind." dfilkjfklajkljkdfhkahkahskdslkjd;ajdlsa;k
+              small, is a step toward a stronger body and a clearer mind."
             </Text>
           </View>
         </View>
       </ScrollView>
   
-      {/* Navbar tetap di bawah */}
+      {/* Navbar */}
       <View style={styles.navbar}>
         <TouchableOpacity 
-        style={styles.navItem}
-        onPress={() => navigation.navigate('Home')}>
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-        style={styles.navItem}
-        onPress={() => navigation.navigate('ChatBotLanding')}>
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ChatBotLanding')}>
           <Image source={BubbleChatIcon} style={styles.navIcon} />
           <Text style={styles.navText}>AI Chatbot</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-        style={styles.navItem}
-        onPress={() => navigation.navigate('Notification')}>
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
@@ -312,30 +311,26 @@ const HomePage = () => {
       </View>
     </View>
   );
-  
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: {
     paddingHorizontal: 15,
     paddingTop: 40,
-    paddingBottom: 100, // Supaya konten gak ketiban navbar
-    alignItems: 'center',
+    paddingBottom: 100,
     backgroundColor: '#fff',
   },
-  
   profileSection: {
-    // backgroundColor: 'white',
     marginTop: 20,
     marginHorizontal: 16,
     borderRadius: 12,
     padding: 0,
     alignItems: 'center',
-    // shadowColor: '#000',
-    // shadowOffset: {width: 0, height: 2},
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 2,
   },
   userName: {
     fontSize: 22,
@@ -355,12 +350,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fcd34d', // yellow-300
+    backgroundColor: '#fcd34d',
     justifyContent: 'center',
     alignItems: 'center',
   },
   scheduleCard: {
-    backgroundColor: '#dbeafe', // blue-100
+    backgroundColor: '#dbeafe',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -378,14 +373,14 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#4b5563', // gray-600
+    color: '#4b5563',
   },
   cardDescription: {
     fontSize: 12,
     marginBottom: 16,
   },
   scheduleButton: {
-    backgroundColor: '#3b82f6', // blue-500
+    backgroundColor: '#3b82f6',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -393,7 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   chatButton: {
-    backgroundColor: '#3b82f6', // blue-500
+    backgroundColor: '#3b82f6',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20,
@@ -402,11 +397,10 @@ const styles = StyleSheet.create({
   infoCardsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    // marginHorizontal: 15,
     gap: 12,
   },
   infoCard: {
-    backgroundColor: '#dbeafe', // blue-100
+    backgroundColor: '#dbeafe',
     borderRadius: 16,
     padding: 16,
     width: '48%',
@@ -414,13 +408,6 @@ const styles = StyleSheet.create({
   quoteText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  statbox: {
-    flexDirection: 'row',
-    gap: 20,
-    marginHorizontal: 10,
-    // alignContent: 'center',
-    // justifyContent:
   },
   statsContainer: {
     flexDirection: 'row',
@@ -441,38 +428,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   workoutCircle: {
-    backgroundColor: '#dbeafe', // blue-100
+    backgroundColor: '#dbeafe',
   },
-  streakCircle: {
-    backgroundColor: '#ffedd5', // orange-100
+  activeStreakCircle: {
+    backgroundColor: '#3b82f6',
+  },
+  inactiveStreakCircle: {
+    backgroundColor: '#d1d5db',
   },
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
   },
   workoutNumber: {
-    color: '#3b82f6', // blue-500
+    color: '#3b82f6',
   },
-  streakNumber: {
-    color: '#f97316', // orange-500
+  activeStreakNumber: {
+    color: '#ffffff',
+  },
+  inactiveStreakNumber: {
+    color: '#6b7280',
   },
   statLabel: {
     fontSize: 14,
     textAlign: 'center',
   },
-  editButton: {
-    backgroundColor: '#3b82f6', // blue-500
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  editButtonText: {
-    color: 'white',
-    fontSize: 14,
-  },
   header: {
     marginBottom: 24,
-    // textAlign: 'left',
     alignSelf: 'left',
   },
   welcomeText: {
@@ -481,38 +463,10 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    // justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
     paddingHorizontal: 15,
     paddingTop: 40,
-    // marginTop: 40,
-  },
-  aibox: {
-    backgroundColor: '#B7E1FF',
-    width: '45%',
-    borderRadius: 16,
-    padding: 20,
-    height: 150,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    // marginBottom: 20,
-    // alignSelf: start
-  },
-  selamattitle: {
-    fontSize: 16,
-    // fontWeight: 'bold',
-    // marginBottom: 20,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    width: 160,
   },
   buttonText: {
     color: '#fff',
@@ -554,9 +508,30 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#d1d5db', // gray-300
+    backgroundColor: '#d1d5db',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  graphContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  graphTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  graphSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
   },
 });
 

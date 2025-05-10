@@ -1,17 +1,10 @@
-import React, {useState, useEffect} from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 
 import HomeIcon from '../assets/images/home_icon.webp';
-import BubbleChatIcon from '../assets/images/chat_bubble.webp';
+import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 import CalendarIcon from '../assets/images/calendar_icon.webp';
@@ -19,10 +12,8 @@ import BackIcon from '../assets/images/back_button.webp';
 
 const getWeekDates = () => {
   const today = new Date();
-  const firstDayOfWeek = new Date(
-    today.setDate(today.getDate() - today.getDay() + 1),
-  ); // Monday
-  const weekDates = Array.from({length: 7}, (_, i) => {
+  const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Monday
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(firstDayOfWeek);
     date.setDate(firstDayOfWeek.getDate() + i);
     return date;
@@ -30,12 +21,17 @@ const getWeekDates = () => {
   return weekDates;
 };
 
+const getDayName = (date: Date) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return days[date.getDay()];
+};
+
 const PreviewCalendarPage = () => {
   const navigation = useNavigation();
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [activities, setActivities] = useState<
-    {title: string; time: string; color: string}[]
+    { title: string; time: string; color: string; type: string }[]
   >([]);
 
   useEffect(() => {
@@ -52,14 +48,15 @@ const PreviewCalendarPage = () => {
 
   const fetchActivities = async (date: Date) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const dayName = getDayName(date);
       const snapshot = await firestore()
         .collection('events')
-        .where('day', '==', formattedDate)
+        .where('day', '==', dayName)
         .get();
 
-      const fetchedActivities = snapshot.docs.map(doc => {
+      const fetchedActivities = snapshot.docs.map((doc) => {
         const data = doc.data();
+        const isWorkout = data.type === 'Workout';
         return {
           title: data.title,
           time: `${new Date(data.start).toLocaleTimeString([], {
@@ -69,7 +66,8 @@ const PreviewCalendarPage = () => {
             hour: '2-digit',
             minute: '2-digit',
           })}`,
-          color: data.type === 'Workout' ? '#42A5F5' : '#FFD54F', // Warna berdasarkan tipe
+          color: isWorkout ? '#42A5F5' : '#FFD54F',
+          type: data.type
         };
       });
 
@@ -83,108 +81,126 @@ const PreviewCalendarPage = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Image source={BackIcon} style={styles.backIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendar</Text>
       </View>
 
-      {/* Streak Card */}
-      <View style={styles.streakCard}>
-        <View style={styles.streakIcon}>
-          <Image source={CalendarIcon} style={styles.streakIconImage} />
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Streak Card */}
+        <View style={styles.streakCard}>
+          <View style={styles.streakIcon}>
+            <Image source={CalendarIcon} style={styles.streakIconImage} />
+          </View>
+          <View style={styles.streakTextContainer}>
+            <Text style={styles.streakTitle}>Amazing work on your 34th streak!</Text>
+            <Text style={styles.streakSubtitle}>
+              While studying for your academics, ease your time management by setting up a workout
+              schedule along with your class schedule.
+            </Text>
+          </View>
         </View>
-        <View style={styles.streakTextContainer}>
-          <Text style={styles.streakTitle}>
-            Amazing work on your 34th streak!
-          </Text>
-          <Text style={styles.streakSubtitle}>
-            While studying for your academics, ease your time management by
-            setting up a workout schedule along with your class schedule.
-          </Text>
-        </View>
-      </View>
 
-      {/* Date Scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.dateScroll}>
-        {weekDates.map((date, index) => {
-          const isActive = activeDate?.toDateString() === date.toDateString();
-          return (
-            <View key={index} style={styles.dateContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.dateButton,
-                  isActive
-                    ? styles.dateButtonActive
-                    : styles.dateButtonInactive,
-                ]}
-                onPress={() => setActiveDate(date)}>
-                <Text
+        {/* Date Scroll */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.dateScroll}
+        >
+          {weekDates.map((date, index) => {
+            const isActive = activeDate?.toDateString() === date.toDateString();
+            const dayName = getDayName(date);
+            const dateNumber = date.getDate();
+            return (
+              <View key={index} style={styles.dateContainer}>
+                <TouchableOpacity
                   style={[
-                    styles.dateText,
-                    isActive ? styles.dateTextActive : styles.dateTextInactive,
-                  ]}>
-                  {date.toDateString().split(' ')[1]} {date.getDate()}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      {/* Activities */}
-      <View>
-        <Text style={styles.activitiesTitle}>Workout day</Text>
-        {activities.length > 0 ? (
-          activities.map((item, idx) => (
-            <View key={idx} style={styles.activityContainer}>
-              <View
-                style={[
-                  styles.activityIndicator,
-                  {backgroundColor: item.color},
-                ]}
-              />
-              <View style={styles.activityTextContainer}>
-                <Text style={styles.activityTitle}>{item.title}</Text>
-                <Text style={styles.activityTime}>{item.time}</Text>
+                    styles.dateButton,
+                    isActive ? styles.dateButtonActive : styles.dateButtonInactive,
+                  ]}
+                  onPress={() => setActiveDate(date)}
+                >
+                  <Text
+                    style={[
+                      styles.dateText,
+                      isActive ? styles.dateTextActive : styles.dateTextInactive,
+                    ]}
+                  >
+                    {dayName} {dateNumber}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.noActivitiesText}>
-            No activities for this day.
-          </Text>
-        )}
-      </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Activities - Ditempatkan lebih dekat dengan date scroll */}
+        <View style={styles.activitiesSection}>
+          {activities.length > 0 ? (
+            <>
+              {/* Workout Section */}
+              {activities.some(a => a.type === 'Workout') && (
+                <View style={styles.workoutContainer}>
+                  <Text style={styles.activitiesTitle}>Workout day</Text>
+                  {activities
+                    .filter(a => a.type === 'Workout')
+                    .map((item, idx) => (
+                      <View key={`workout-${idx}`} style={styles.activityContainer}>
+                        <View style={[styles.activityIndicator, { backgroundColor: item.color }]} />
+                        <View style={styles.activityTextContainer}>
+                          <Text style={styles.activityTitle}>{item.title}</Text>
+                          <Text style={styles.activityTime}>{item.time}</Text>
+                        </View>
+                      </View>
+                    ))}
+                </View>
+              )}
+
+              {/* Classes Section */}
+              {activities.some(a => a.type === 'Classes') && (
+                <View style={styles.classesContainer}>
+                  <Text style={styles.activitiesTitle}>Class schedule</Text>
+                  {activities
+                    .filter(a => a.type === 'Classes')
+                    .map((item, idx) => (
+                      <View key={`class-${idx}`} style={styles.activityContainer}>
+                        <View style={[styles.activityIndicator, { backgroundColor: item.color }]} />
+                        <View style={styles.activityTextContainer}>
+                          <Text style={styles.activityTitle}>{item.title}</Text>
+                          <Text style={styles.activityTime}>{item.time}</Text>
+                        </View>
+                      </View>
+                    ))}
+                </View>
+              )}
+            </>
+          ) : (
+            <Text style={styles.noActivitiesText}>No activities for this day.</Text>
+          )}
+        </View>
+      </ScrollView>
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('ChatBotLanding')}>
-          <Image source={BubbleChatIcon} style={styles.navIcon} />
-          <Text style={styles.navText}>AI Chatbot</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Library')}>
+          <Image source={BookOpenIcon} style={styles.navIcon} />
+          <Text style={styles.navText}>Library</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Notification')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
@@ -199,6 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingTop: 12,
+    paddingBottom: 70, // Untuk memberi ruang bagi navbar
   },
   header: {
     flexDirection: 'row',
@@ -277,15 +294,23 @@ const styles = StyleSheet.create({
   dateTextInactive: {
     color: '#000',
   },
+  activitiesContainer: {
+    flex: 1,
+    marginBottom: 16,
+  },
   activitiesTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 12,
+    color: '#42A5F5',
   },
   activityContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
   },
   activityIndicator: {
     width: 6,
@@ -299,6 +324,7 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 14,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   activityTime: {
     fontSize: 13,
@@ -308,7 +334,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#757575',
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 24,
   },
   navbar: {
     flexDirection: 'row',
