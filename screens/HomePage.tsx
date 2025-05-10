@@ -11,7 +11,7 @@ import firestore from '@react-native-firebase/firestore';
 
 // Import ikon untuk navbar
 import HomeIcon from '../assets/images/home_icon.webp';
-import BookOpenIcon from '../assets/images/book_icon.webp';
+import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 
@@ -293,9 +293,9 @@ const HomePage = () => {
         </TouchableOpacity>
         <TouchableOpacity 
         style={styles.navItem}
-        onPress={() => navigation.navigate('Library')}>
-          <Image source={BookOpenIcon} style={styles.navIcon} />
-          <Text style={styles.navText}>Library</Text>
+        onPress={() => navigation.navigate('ChatBotLanding')}>
+          <Image source={BubbleChatIcon} style={styles.navIcon} />
+          <Text style={styles.navText}>AI Chatbot</Text>
         </TouchableOpacity>
         <TouchableOpacity 
         style={styles.navItem}
@@ -305,7 +305,7 @@ const HomePage = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}>
+          onPress={() => navigation.navigate('ProfileLanding')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>

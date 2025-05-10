@@ -15,6 +15,7 @@ import CalendarLanding from './screens/CalendarLandingPage';
 import NotificiationsPage from './screens/NotificationPage';
 import CalendarMain from './screens/CalendarMain';
 import PreviewCalendar from './screens/PreviewCalendarPage';
+import ProfileLandingPage from './screens/ProfileLanding';
 
 const Stack = createNativeStackNavigator();
 
@@ -61,6 +62,11 @@ const App = () => {
         <Stack.Screen
           name="Profile"
           component={ProfilePage}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="ProfileLanding"
+          component={ProfileLandingPage}
           options={{headerShown: false}}
         />
         <Stack.Screen

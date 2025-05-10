@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 
 import HomeIcon from '../assets/images/home_icon.webp';
-import BookOpenIcon from '../assets/images/book_icon.webp';
+import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 import CalendarIcon from '../assets/images/calendar_icon.webp';
@@ -12,8 +19,10 @@ import BackIcon from '../assets/images/back_button.webp';
 
 const getWeekDates = () => {
   const today = new Date();
-  const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Monday
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
+  const firstDayOfWeek = new Date(
+    today.setDate(today.getDate() - today.getDay() + 1),
+  ); // Monday
+  const weekDates = Array.from({length: 7}, (_, i) => {
     const date = new Date(firstDayOfWeek);
     date.setDate(firstDayOfWeek.getDate() + i);
     return date;
@@ -26,7 +35,7 @@ const PreviewCalendarPage = () => {
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [activities, setActivities] = useState<
-    { title: string; time: string; color: string }[]
+    {title: string; time: string; color: string}[]
   >([]);
 
   useEffect(() => {
@@ -49,7 +58,7 @@ const PreviewCalendarPage = () => {
         .where('day', '==', formattedDate)
         .get();
 
-      const fetchedActivities = snapshot.docs.map((doc) => {
+      const fetchedActivities = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           title: data.title,
@@ -74,7 +83,9 @@ const PreviewCalendarPage = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
           <Image source={BackIcon} style={styles.backIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendar</Text>
@@ -86,16 +97,21 @@ const PreviewCalendarPage = () => {
           <Image source={CalendarIcon} style={styles.streakIconImage} />
         </View>
         <View style={styles.streakTextContainer}>
-          <Text style={styles.streakTitle}>Amazing work on your 34th streak!</Text>
+          <Text style={styles.streakTitle}>
+            Amazing work on your 34th streak!
+          </Text>
           <Text style={styles.streakSubtitle}>
-            While studying for your academics, ease your time management by setting up a workout
-            schedule along with your class schedule.
+            While studying for your academics, ease your time management by
+            setting up a workout schedule along with your class schedule.
           </Text>
         </View>
       </View>
 
       {/* Date Scroll */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.dateScroll}>
         {weekDates.map((date, index) => {
           const isActive = activeDate?.toDateString() === date.toDateString();
           return (
@@ -103,16 +119,16 @@ const PreviewCalendarPage = () => {
               <TouchableOpacity
                 style={[
                   styles.dateButton,
-                  isActive ? styles.dateButtonActive : styles.dateButtonInactive,
+                  isActive
+                    ? styles.dateButtonActive
+                    : styles.dateButtonInactive,
                 ]}
-                onPress={() => setActiveDate(date)}
-              >
+                onPress={() => setActiveDate(date)}>
                 <Text
                   style={[
                     styles.dateText,
                     isActive ? styles.dateTextActive : styles.dateTextInactive,
-                  ]}
-                >
+                  ]}>
                   {date.toDateString().split(' ')[1]} {date.getDate()}
                 </Text>
               </TouchableOpacity>
@@ -127,7 +143,12 @@ const PreviewCalendarPage = () => {
         {activities.length > 0 ? (
           activities.map((item, idx) => (
             <View key={idx} style={styles.activityContainer}>
-              <View style={[styles.activityIndicator, { backgroundColor: item.color }]} />
+              <View
+                style={[
+                  styles.activityIndicator,
+                  {backgroundColor: item.color},
+                ]}
+              />
               <View style={styles.activityTextContainer}>
                 <Text style={styles.activityTitle}>{item.title}</Text>
                 <Text style={styles.activityTime}>{item.time}</Text>
@@ -135,25 +156,35 @@ const PreviewCalendarPage = () => {
             </View>
           ))
         ) : (
-          <Text style={styles.noActivitiesText}>No activities for this day.</Text>
+          <Text style={styles.noActivitiesText}>
+            No activities for this day.
+          </Text>
         )}
       </View>
 
       {/* Bottom Navigation */}
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}>
           <Image source={HomeIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Library')}>
-          <Image source={BookOpenIcon} style={styles.navIcon} />
-          <Text style={styles.navText}>Library</Text>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ChatBotLanding')}>
+          <Image source={BubbleChatIcon} style={styles.navIcon} />
+          <Text style={styles.navText}>AI Chatbot</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Notification')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Notification')}>
           <Image source={NotificationIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Notification</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Profile')}>
           <Image source={UserIcon} style={styles.navIcon} />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
