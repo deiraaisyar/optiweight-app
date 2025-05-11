@@ -28,7 +28,7 @@ const AIChatboxScreen = ({ navigation }: { navigation: ChatBotLandingNavigationP
       </TouchableOpacity>
 
       {/* Title */}
-      <Text style={styles.title}>AI Chatbox</Text>
+      <Text style={styles.title}>Fit Buddy</Text>
 
       {/* Logo */}
       <Image source={AiLogo} style={[styles.logo, { width: 160, height: 160 }]} />
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
     fontFamily: 'Inter-Bold',
   },
   navbar: {

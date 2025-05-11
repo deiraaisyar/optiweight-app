@@ -6,6 +6,9 @@ import SettingsIcon from '../assets/images/settings-icon.webp';
 import LogoutIcon from '../assets/images/log_out_icon.webp';
 import FAQIcon from '../assets/images/faq_icon.webp';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CommonActions } from '@react-navigation/native';
+
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -172,13 +175,24 @@ const ProfileScreen = () => {
           <Text style={styles.infoValue}>FAQ</Text>
         </View>
 
-                <View style={styles.infoRow}>
-          <TouchableOpacity
-            style={styles.navItems}
-            onPress={() => navigation.navigate('Profile')}>
-            <Image source={LogoutIcon} style={styles.navIcons} />
-          </TouchableOpacity>
-          <Text style={styles.infoValue}>Logout</Text>
+        <View style={styles.infoRow}>
+        <TouchableOpacity
+          style={styles.navItems}
+          onPress={async () => {
+            // Hapus token atau data login
+            await AsyncStorage.removeItem('userToken');
+
+            // Reset navigation ke halaman Login (tanpa bisa kembali)
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Landing' }],
+              })
+            );
+          }}>
+          <Image source={LogoutIcon} style={styles.navIcons} />
+        </TouchableOpacity>
+        <Text style={styles.infoValue}>Logout</Text>
         </View>
       </View>
 

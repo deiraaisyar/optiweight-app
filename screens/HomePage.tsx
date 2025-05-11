@@ -17,7 +17,7 @@ import firestore from '@react-native-firebase/firestore';
 import { LineChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 
-// Import ikon untuk navbar
+// Import icons for navbar
 import HomeIcon from '../assets/images/home_icon.webp';
 import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
@@ -43,8 +43,8 @@ type WorkoutEvent = {
   day: string;
   type: string;
   title: string;
-  start: string;
-  end: string;
+  start: any;
+  end: any;
   completed?: boolean;
 };
 
@@ -60,6 +60,7 @@ const HomePage = () => {
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<number>(0);
   const [streakHistory, setStreakHistory] = useState<number[]>([0, 0, 0, 0]);
   const [lastWorkoutDate, setLastWorkoutDate] = useState<Date | null>(null);
+  const [todayWorkout, setTodayWorkout] = useState<WorkoutEvent | null>(null);
 
   useEffect(() => {
     fetchUserData();
@@ -93,7 +94,6 @@ const HomePage = () => {
         setWeeklyWorkouts(data.weeklyWorkouts || 0);
         setStreakHistory(data.streakHistory || [0, 0, 0, 0]);
 
-        // Check if streak needs to be reset
         checkStreakReset(data.lastStreakUpdate);
       }
     } catch (error) {
@@ -111,7 +111,6 @@ const HomePage = () => {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // Reset streak if last workout was before yesterday
     if (lastUpdateDate < yesterday) {
       resetStreak();
     }
@@ -128,7 +127,6 @@ const HomePage = () => {
       });
       setStreakCount(0);
       
-      // Update streak history
       const newStreakHistory = [...streakHistory];
       newStreakHistory.shift();
       newStreakHistory.push(0);
@@ -150,15 +148,39 @@ const HomePage = () => {
       const events = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        start: doc.data().start.toDate(),
+        end: doc.data().end.toDate(),
         completed: doc.data().completed || false
       })) as WorkoutEvent[];
 
       setWorkoutEvents(events);
       checkCurrentStreak(events);
       calculateWeeklyWorkouts(events);
+      findTodayWorkout(events);
     } catch (error) {
       console.error('Error fetching workout events:', error);
     }
+  };
+
+  const findTodayWorkout = (events: WorkoutEvent[]) => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const todayName = dayNames[currentDay];
+
+    const todayWorkouts = events.filter(event => event.day === todayName);
+
+    for (const event of todayWorkouts) {
+      const startTime = new Date(event.start);
+      const endTime = new Date(event.end);
+      
+      if (now >= startTime && now <= endTime) {
+        setTodayWorkout(event);
+        return;
+      }
+    }
+
+    setTodayWorkout(null);
   };
 
   const checkCurrentStreak = (events: WorkoutEvent[]) => {
@@ -205,20 +227,16 @@ const HomePage = () => {
   };
 
   const handleStreakPress = async () => {
-    if (currentStreakActive) {
+    if (currentStreakActive && todayWorkout) {
       const newStreakCount = streakCount + 1;
       setStreakCount(newStreakCount);
       
-      // Update streak history
       const newStreakHistory = [...streakHistory];
       newStreakHistory.shift();
       newStreakHistory.push(newStreakCount);
       setStreakHistory(newStreakHistory);
       
-      // Update in database
       await updateStreakInDatabase(newStreakCount);
-      
-      // Mark workout as completed
       await markWorkoutAsCompleted();
       
       Alert.alert('Streak Updated', `Your streak is now ${newStreakCount} days!`);
@@ -226,32 +244,31 @@ const HomePage = () => {
   };
 
   const markWorkoutAsCompleted = async () => {
-    const now = new Date();
-    const currentDay = now.getDay();
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const todayName = dayNames[currentDay];
+    if (!todayWorkout) return;
 
     try {
-      // Find today's workout event
-      const todayWorkout = workoutEvents.find(event => 
-        event.day === todayName && 
-        now >= new Date(event.start) && 
-        now <= new Date(event.end) &&
-        !event.completed
-      );
-
-      if (todayWorkout) {
-        await firestore()
-          .collection('events')
-          .doc(todayWorkout.id)
-          .update({ completed: true });
-          
-        // Refresh workout events
-        fetchWorkoutEvents();
-      }
+      await firestore()
+        .collection('events')
+        .doc(todayWorkout.id)
+        .update({ completed: true });
+        
+      fetchWorkoutEvents();
     } catch (error) {
       console.error('Error marking workout as completed:', error);
     }
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    };
+    return date.toLocaleDateString(undefined, options);
   };
 
   if (loading) {
@@ -302,6 +319,49 @@ const HomePage = () => {
             <Text style={styles.statLabel}>Streak</Text>
           </View>
         </View>
+  
+        {/* Streak Counter Section */}
+        {todayWorkout ? (
+          <View style={styles.streakCounterContainer}>
+            <Text style={styles.streakCounterTitle}>Streak Counter</Text>
+            
+            <View style={styles.streakTimeRow}>
+              <View style={styles.streakTimeColumn}>
+                <Text style={styles.streakTimeLabel}>Starts</Text>
+                <Text style={styles.streakTimeValue}>
+                  {formatTime(new Date(todayWorkout.start))}
+                </Text>
+              </View>
+              
+              <View style={styles.streakTimeColumn}>
+                <Text style={styles.streakTimeLabel}>Ends</Text>
+                <Text style={styles.streakTimeValue}>
+                  {formatTime(new Date(todayWorkout.end))}
+                </Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              onPress={handleStreakPress}
+              style={[
+                styles.streakCounterButton,
+                currentStreakActive ? styles.activeStreakButton : styles.inactiveStreakButton
+              ]}
+              disabled={!currentStreakActive}
+            >
+              <Text style={[
+                styles.streakCounterButtonText,
+                currentStreakActive ? styles.activeStreakButtonText : styles.inactiveStreakButtonText
+              ]}>
+                {streakCount} Days Streak
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.streakCounterContainer}>
+            <Text style={styles.streakCounterTitle}>No Workout Scheduled Today</Text>
+          </View>
+        )}
   
         <View style={styles.scheduleCard}>
           <View style={styles.scheduleContent}>
@@ -640,6 +700,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 16,
+  },
+  streakCounterContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  streakCounterTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  streakTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  streakTimeColumn: {
+    alignItems: 'center',
+    width: '48%',
+  },
+  streakTimeLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  streakTimeValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  streakCounterButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+  },
+  activeStreakButton: {
+    backgroundColor: '#3b82f6',
+  },
+  inactiveStreakButton: {
+    backgroundColor: '#d1d5db',
+  },
+  streakCounterButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  activeStreakButtonText: {
+    color: '#ffffff',
+  },
+  inactiveStreakButtonText: {
+    color: '#6b7280',
   },
 });
 
