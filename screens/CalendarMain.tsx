@@ -10,13 +10,15 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import firestore from '@react-native-firebase/firestore';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
+import { GOOGLE_WEB_CLIENT_ID } from '@env';
 
+// Import icons
 import HomeIcon from '../assets/images/home_icon.webp';
 import BookOpenIcon from '../assets/images/book_icon.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
@@ -25,15 +27,16 @@ import KananIcon from '../assets/images/button_kanan.webp';
 import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 import BackIcon from '../assets/images/back_button.webp';
 
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+  scopes: ['https://www.googleapis.com/auth/calendar.events'],
+  offlineAccess: true,
+});
+
 const CalendarMain = ({navigation}: {navigation: any}) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [selectedOption, setSelectedOption] = useState('Select');
-  const handleSelect = option => {
-    setSelectedOption(option);
-    setDropdownVisible(false);
-    setEventType(option === 'Classes' ? 'Classes' : 'Workout');
-  };
-
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [eventType, setEventType] = useState<'Classes' | 'Workout' | null>(null);
   const [eventTitle, setEventTitle] = useState<string>('');
@@ -45,19 +48,32 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   useEffect(() => {
-    const getUser = async () => {
+    const initialize = async () => {
       const user = auth().currentUser;
       setCurrentUser(user);
+      
       if (user) {
         fetchEvents(user.uid);
       }
+
+      // Check Google Sign-In status
+      const isSignedIn = await GoogleSignin.isSignedIn();
+      setIsGoogleSignedIn(isSignedIn);
     };
-    getUser();
+
+    initialize();
   }, []);
+
+  const handleSelect = (option: string) => {
+    setSelectedOption(option);
+    setDropdownVisible(false);
+    setEventType(option === 'Classes' ? 'Classes' : 'Workout');
+  };
 
   const handleAddEvent = async () => {
     if (!currentUser || !selectedDay || !eventType || !eventTitle || !startTime || !endTime) {
@@ -65,65 +81,118 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
       return;
     }
 
+    // Calculate the next occurrence of the selected day
+    const dayIndex = days.indexOf(selectedDay);
+    const today = new Date();
+    const nextDay = new Date(today);
+    nextDay.setDate(today.getDate() + ((dayIndex - today.getDay() + 7) % 7));
+    
+    // Set the time for the event
+    const eventStart = new Date(nextDay);
+    eventStart.setHours(startTime.getHours());
+    eventStart.setMinutes(startTime.getMinutes());
+    
+    const eventEnd = new Date(nextDay);
+    eventEnd.setHours(endTime.getHours());
+    eventEnd.setMinutes(endTime.getMinutes());
+
     const newEvent = {
       day: selectedDay,
       type: eventType,
       title: eventTitle,
-      start: startTime.toISOString(),
-      end: endTime.toISOString(),
-      completed: false, // Important for streak logic
-      userId: currentUser.uid // Connect event to user
+      start: eventStart.toISOString(),
+      end: eventEnd.toISOString(),
+      completed: false,
+      userId: currentUser.uid,
+      googleCalendarEventId: null
     };
 
     try {
       setLoading(true);
 
-      // Save to user-specific events collection
+      // 1. Save to Firestore
       const userEventsRef = firestore()
         .collection('users')
         .doc(currentUser.uid)
         .collection('events');
 
       const firestoreResponse = await userEventsRef.add(newEvent);
+      const eventId = firestoreResponse.id;
 
-      // Add to Google Calendar (optional)
-      try {
-        const accessToken = await getAccessToken();
-        await fetch(
-          'https://www.googleapis.com/calendar/v3/calendars/primary/events',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
+      // 2. Add to Google Calendar if signed in
+      if (isGoogleSignedIn) {
+        try {
+          const tokens = await GoogleSignin.getTokens();
+          
+          const googleEvent = {
+            summary: `${eventType}: ${eventTitle}`,
+            description: `Added via Fitness App`,
+            start: {
+              dateTime: eventStart.toISOString(),
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             },
-            body: JSON.stringify({
-              summary: eventTitle,
-              start: { dateTime: startTime.toISOString(), timeZone: 'Asia/Jakarta' },
-              end: { dateTime: endTime.toISOString(), timeZone: 'Asia/Jakarta' },
-            }),
-          }
-        );
-      } catch (googleError) {
-        console.log('Google Calendar error:', googleError);
+            end: {
+              dateTime: eventEnd.toISOString(),
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
+            reminders: {
+              useDefault: true,
+            },
+          };
+
+          const response = await fetch(
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${tokens.accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(googleEvent),
+            }
+          );
+
+          const googleEventData = await response.json();
+          
+          // Update Firestore with Google Calendar event ID
+          await userEventsRef.doc(eventId).update({
+            googleCalendarEventId: googleEventData.id
+          });
+
+          newEvent.googleCalendarEventId = googleEventData.id;
+        } catch (googleError) {
+          console.log('Google Calendar error:', googleError);
+          Alert.alert(
+            'Warning', 
+            'Event was saved locally but could not be added to Google Calendar'
+          );
+        }
       }
 
       // Update local state
-      setEvents(prev => [...prev, {id: firestoreResponse.id, ...newEvent}]);
-
+      setEvents(prev => [...prev, {id: eventId, ...newEvent}]);
+      
       // Reset form
       setEventTitle('');
       setStartTime(null);
       setEndTime(null);
       setEventType(null);
       setSelectedOption('Select');
+      setSelectedDay(null);
 
       // Show success
       setShowSuccessNotification(true);
       setTimeout(() => setShowSuccessNotification(false), 3000);
-      Alert.alert('Success', 'Event added successfully!');
+      
+      Alert.alert(
+        'Success', 
+        isGoogleSignedIn 
+          ? 'Event added to both your app and Google Calendar!' 
+          : 'Event added to your app calendar!'
+      );
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error('Error adding event:', error);
+      Alert.alert('Error', 'Failed to add event');
     } finally {
       setLoading(false);
     }
@@ -150,14 +219,25 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     }
   };
 
-  const getAccessToken = async () => {
+  const handleGoogleSignIn = async () => {
     try {
-      const userInfo = await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
-      return tokens.accessToken;
+      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.signIn();
+      setIsGoogleSignedIn(true);
+      Alert.alert('Success', 'Google Calendar connected!');
     } catch (error) {
-      console.error('Error getting access token:', error);
-      throw new Error('Failed to get access token');
+      console.error('Google Sign-In Error:', error);
+      Alert.alert('Error', 'Failed to connect Google Calendar');
+    }
+  };
+
+  const handleGoogleSignOut = async () => {
+    try {
+      await GoogleSignin.signOut();
+      setIsGoogleSignedIn(false);
+      Alert.alert('Success', 'Disconnected from Google Calendar');
+    } catch (error) {
+      console.error('Google Sign-Out Error:', error);
     }
   };
 
@@ -180,6 +260,27 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
         </View>
       )}
 
+      {/* Google Calendar Connection Status */}
+      <View style={styles.googleAuthContainer}>
+        {isGoogleSignedIn ? (
+          <TouchableOpacity 
+            style={[styles.googleButton, styles.googleSignOutButton]}
+            onPress={handleGoogleSignOut}>
+            <Text style={styles.googleButtonText}>
+              Disconnect Google Calendar
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.googleButton, styles.googleSignInButton]}
+            onPress={handleGoogleSignIn}>
+            <Text style={styles.googleButtonText}>
+              Connect Google Calendar
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* Day Selector */}
       <Text style={styles.subtitle}>
         Press which day to add to your calendar!
@@ -190,7 +291,9 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
             key={day}
             style={[
               styles.dayButton,
-              selectedDay === day && styles.dayButtonSelected,
+              selectedDay === day 
+                ? styles.dayButtonSelected 
+                : styles.dayButtonUnselected,
             ]}
             onPress={() => setSelectedDay(day)}>
             <Text style={selectedDay === day ? styles.dayTextSelected : styles.dayText}>
@@ -223,6 +326,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
                   </Text>
                   <Text style={styles.eventCardStatus}>
                     Status: {item.completed ? 'Completed ✅' : 'Pending ⏳'}
+                    {item.googleCalendarEventId && ' (Synced with Google)'}
                   </Text>
                 </View>
               )}
@@ -372,10 +476,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center', // Center the header title
     marginBottom: 20,
+    position: 'relative',
   },
   backButton: {
-    marginRight: 15,
+    position: 'absolute',
+    left: 0,
   },
   backIcon: {
     width: 24,
@@ -383,6 +490,25 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  googleAuthContainer: {
+    marginBottom: 15,
+  },
+  googleButton: {
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  googleSignInButton: {
+    backgroundColor: '#4285F4',
+  },
+  googleSignOutButton: {
+    backgroundColor: '#DB4437',
+  },
+  googleButtonText: {
+    color: 'white',
     fontWeight: 'bold',
   },
   successNotification: {
@@ -395,12 +521,6 @@ const styles = StyleSheet.create({
     color: '#2E7D32',
     textAlign: 'center',
     fontWeight: 'bold',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
   },
   subtitle: {
     fontSize: 14,
@@ -416,15 +536,17 @@ const styles = StyleSheet.create({
   dayButton: {
     padding: 10,
     borderRadius: 5,
-    backgroundColor: '#f0f0f0',
     alignItems: 'center',
     minWidth: 40,
   },
   dayButtonSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#49B1FB',
+  },
+  dayButtonUnselected: {
+    backgroundColor: '#B7E1FF',
   },
   dayText: {
-    color: '#555',
+    color: '#333',
   },
   dayTextSelected: {
     color: '#fff',

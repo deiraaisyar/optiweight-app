@@ -22,6 +22,7 @@ import HomeIcon from '../assets/images/home_icon.webp';
 import BubbleChatIcon from '../assets/images/chat_bubble.webp';
 import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
+import CalendarIcon from '../assets/images/calendar_icon.webp';
 
 type HomePageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -47,8 +48,6 @@ type WorkoutEvent = {
   end: any;
   completed?: boolean;
 };
-
-const CalendarIcon = () => <Text style={{fontSize: 28}}>📅</Text>;
 
 const HomePage = () => {
   const navigation = useNavigation<HomePageNavigationProp>();
@@ -371,12 +370,12 @@ const HomePage = () => {
             </Text>
             <TouchableOpacity style={styles.scheduleButton}>
               <Text style={styles.buttonText} onPress={() => navigation.navigate('CalendarLanding')}>
-                Start personalized schedule
+                Preview personalized calendar
               </Text>
             </TouchableOpacity>
           </View>
           <View style={styles.calendarIconContainer}>
-            <CalendarIcon />
+            <Image source={CalendarIcon} style={{width: 100, height: 100}} />
           </View>
         </View>
   
@@ -514,14 +513,14 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: 'bold',
   },
-  calendarIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#fcd34d',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // calendarIconContainer: {
+  //   width: 60,
+  //   height: 60,
+  //   borderRadius: 30,
+  //   backgroundColor: '#fcd34d',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
   scheduleCard: {
     backgroundColor: '#dbeafe',
     borderRadius: 16,
@@ -638,7 +637,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
   },
   navbar: {
     flexDirection: 'row',
