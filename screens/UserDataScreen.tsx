@@ -32,6 +32,7 @@ const UserDataScreen = () => {
   const [fullName, setFullName] = useState('');
   const [preferredName, setPreferredName] = useState('');
   const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
   const [gender, setGender] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -61,6 +62,7 @@ const UserDataScreen = () => {
         if (userData?.fullName) setFullName(userData.fullName);
         if (userData?.preferredName) setPreferredName(userData.preferredName);
         if (userData?.weight) setWeight(userData.weight.toString());
+        if (userData?.height) setHeight(userData.height.toString());
         if (userData?.gender) setGender(userData.gender);
         if (userData?.dateOfBirth)
           setDateOfBirth(userData.dateOfBirth.toDate());
@@ -98,6 +100,10 @@ const UserDataScreen = () => {
     }
     if (!weight.trim() || isNaN(Number(weight))) {
       Alert.alert('Error', 'Please enter a valid weight');
+      return false;
+    }
+    if (!height.trim() || isNaN(Number(height))) {
+      Alert.alert('Error', 'Please enter a valid height');
       return false;
     }
     if (!gender) {
@@ -162,6 +168,7 @@ const UserDataScreen = () => {
             fullName,
             preferredName,
             weight: Number(weight),
+            height: Number(height),
             gender,
             dateOfBirth,
             photoUrl: photoUrl || 'default_photo_url', // Gunakan URL default jika tidak ada foto
@@ -258,6 +265,18 @@ const UserDataScreen = () => {
         />
       </View>
 
+      {/* Height Input */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Height (cm)</Text>
+        <TextInput
+          value={height}
+          onChangeText={setHeight}
+          style={styles.input}
+          placeholder="Enter your height in cm"
+          keyboardType="numeric"
+        />
+      </View>
+
       {/* Gender Selection */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Gender</Text>
@@ -327,6 +346,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
+    marginBottom: 15,
   },
   datePickerButton: {
     borderWidth: 1,

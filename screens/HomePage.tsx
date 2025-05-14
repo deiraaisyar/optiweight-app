@@ -31,6 +31,7 @@ type UserData = {
   preferredName: string;
   dateOfBirth: any;
   weight: number;
+  height?: number; // Tambahkan height di sini
   gender: string;
   profileCompleted: boolean;
   streakCount?: number;
@@ -53,13 +54,12 @@ const HomePage = () => {
   const navigation = useNavigation<HomePageNavigationProp>();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [streakCount, setStreakCount] = useState<number>(0);
-  const [workoutEvents, setWorkoutEvents] = useState<WorkoutEvent[]>([]);
-  const [currentStreakActive, setCurrentStreakActive] = useState<boolean>(false);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<number>(0);
   const [streakHistory, setStreakHistory] = useState<number[]>([0, 0, 0, 0]);
   const [lastWorkoutDate, setLastWorkoutDate] = useState<Date | null>(null);
   const [todayWorkout, setTodayWorkout] = useState<WorkoutEvent | null>(null);
+  const [streakCount, setStreakCount] = useState<number>(0);
+  const [currentStreakActive, setCurrentStreakActive] = useState<boolean>(false);
 
   useEffect(() => {
     fetchUserData();
@@ -89,11 +89,11 @@ const HomePage = () => {
         }
         
         setUserData(data);
-        setStreakCount(data.streakCount || 0);
+        setStreakCount(data.streakCount || 0); // Commented out streak logic
         setWeeklyWorkouts(data.weeklyWorkouts || 0);
-        setStreakHistory(data.streakHistory || [0, 0, 0, 0]);
+        setStreakHistory(data.streakHistory || [0, 0, 0, 0]); // Commented out streak logic
 
-        checkStreakReset(data.lastStreakUpdate);
+        // checkStreakReset(data.lastStreakUpdate); // Commented out streak logic
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -102,40 +102,40 @@ const HomePage = () => {
     }
   };
 
-  const checkStreakReset = (lastUpdate: Date | null) => {
-    if (!lastUpdate) return;
+  // const checkStreakReset = (lastUpdate: Date | null) => { // Commented out streak logic
+  //   if (!lastUpdate) return;
 
-    const now = new Date();
-    const lastUpdateDate = new Date(lastUpdate);
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
+  //   const now = new Date();
+  //   const lastUpdateDate = new Date(lastUpdate);
+  //   const yesterday = new Date(now);
+  //   yesterday.setDate(yesterday.getDate() - 1);
 
-    if (lastUpdateDate < yesterday) {
-      resetStreak();
-    }
-  };
+  //   if (lastUpdateDate < yesterday) {
+  //     resetStreak();
+  //   }
+  // };
 
-  const resetStreak = async () => {
-    const currentUser = auth().currentUser;
-    if (!currentUser) return;
+  // const resetStreak = async () => { // Commented out streak logic
+  //   const currentUser = auth().currentUser;
+  //   if (!currentUser) return;
 
-    try {
-      await firestore().collection('users').doc(currentUser.uid).update({
-        streakCount: 0,
-        lastStreakUpdate: null
-      });
-      setStreakCount(0);
+  //   try {
+  //     await firestore().collection('users').doc(currentUser.uid).update({
+  //       streakCount: 0,
+  //       lastStreakUpdate: null
+  //     });
+  //     setStreakCount(0);
       
-      const newStreakHistory = [...streakHistory];
-      newStreakHistory.shift();
-      newStreakHistory.push(0);
-      setStreakHistory(newStreakHistory);
+  //     const newStreakHistory = [...streakHistory];
+  //     newStreakHistory.shift();
+  //     newStreakHistory.push(0);
+  //     setStreakHistory(newStreakHistory);
       
-      Alert.alert('Streak Reset', 'You missed your workout yesterday. Streak has been reset to 0.');
-    } catch (error) {
-      console.error('Error resetting streak:', error);
-    }
-  };
+  //     Alert.alert('Streak Reset', 'You missed your workout yesterday. Streak has been reset to 0.');
+  //   } catch (error) {
+  //     console.error('Error resetting streak:', error);
+  //   }
+  // };
 
   const fetchWorkoutEvents = async () => {
     try {

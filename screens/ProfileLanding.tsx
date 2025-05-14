@@ -154,7 +154,7 @@ const ProfileScreen = () => {
             onPress={() => navigation.navigate('Profile')}>
             <Image source={UserIcon} style={styles.navIcons} />
           </TouchableOpacity>
-          <Text style={styles.infoValue}>Personal Detail</Text>
+          <Text style={styles.infoValue}>Personal Details</Text>
         </View>
 
         <View style={styles.infoRow}>

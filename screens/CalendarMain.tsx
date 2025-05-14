@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import firestore from '@react-native-firebase/firestore';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
-import { GOOGLE_WEB_CLIENT_ID } from '@env';
+import {GOOGLE_WEB_CLIENT_ID} from '@env';
 
 // Import icons
 import HomeIcon from '../assets/images/home_icon.webp';
@@ -30,7 +30,7 @@ import BackIcon from '../assets/images/back_button.webp';
 // Configure Google Sign-In
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
-  scopes: ['https://www.googleapis.com/auth/calendar.events'],
+  scopes: ['https://www.googleapis.com/auth/calendar'],
   offlineAccess: true,
 });
 
@@ -50,7 +50,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
 
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // Changed to start with Sunday
 
   useEffect(() => {
     const initialize = async () => {
@@ -62,8 +62,12 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
       }
 
       // Check Google Sign-In status
-      const isSignedIn = await GoogleSignin.isSignedIn();
-      setIsGoogleSignedIn(isSignedIn);
+      try {
+        const isSignedIn = await GoogleSignin.isSignedIn();
+        setIsGoogleSignedIn(isSignedIn);
+      } catch (error) {
+        console.error('Error checking Google sign-in status:', error);
+      }
     };
 
     initialize();
@@ -75,42 +79,51 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     setEventType(option === 'Classes' ? 'Classes' : 'Workout');
   };
 
+  const resetForm = () => {
+    setEventTitle('');
+    setStartTime(null);
+    setEndTime(null);
+    setEventType(null);
+    setSelectedOption('Select');
+    setSelectedDay(null);
+  };
+
   const handleAddEvent = async () => {
     if (!currentUser || !selectedDay || !eventType || !eventTitle || !startTime || !endTime) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
-    // Calculate the next occurrence of the selected day
-    const dayIndex = days.indexOf(selectedDay);
-    const today = new Date();
-    const nextDay = new Date(today);
-    nextDay.setDate(today.getDate() + ((dayIndex - today.getDay() + 7) % 7));
-    
-    // Set the time for the event
-    const eventStart = new Date(nextDay);
-    eventStart.setHours(startTime.getHours());
-    eventStart.setMinutes(startTime.getMinutes());
-    
-    const eventEnd = new Date(nextDay);
-    eventEnd.setHours(endTime.getHours());
-    eventEnd.setMinutes(endTime.getMinutes());
-
-    const newEvent = {
-      day: selectedDay,
-      type: eventType,
-      title: eventTitle,
-      start: eventStart.toISOString(),
-      end: eventEnd.toISOString(),
-      completed: false,
-      userId: currentUser.uid,
-      googleCalendarEventId: null
-    };
-
     try {
       setLoading(true);
 
-      // 1. Save to Firestore
+      // Calculate the next occurrence of the selected day
+      const dayIndex = days.indexOf(selectedDay);
+      const today = new Date();
+      const nextDay = new Date(today);
+      nextDay.setDate(today.getDate() + ((dayIndex - today.getDay() + 7) % 7));
+      
+      const eventStart = new Date(nextDay);
+      eventStart.setHours(startTime.getHours());
+      eventStart.setMinutes(startTime.getMinutes());
+      
+      const eventEnd = new Date(nextDay);
+      eventEnd.setHours(endTime.getHours());
+      eventEnd.setMinutes(endTime.getMinutes());
+
+      // Create event for Firestore
+      const newEvent = {
+        day: selectedDay,
+        type: eventType,
+        title: eventTitle,
+        start: eventStart.toISOString(),
+        end: eventEnd.toISOString(),
+        completed: false,
+        userId: currentUser.uid,
+        googleCalendarEventId: null
+      };
+
+      // Save to Firestore first
       const userEventsRef = firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -119,11 +132,17 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
       const firestoreResponse = await userEventsRef.add(newEvent);
       const eventId = firestoreResponse.id;
 
-      // 2. Add to Google Calendar if signed in
+      // Try to add to Google Calendar if connected
       if (isGoogleSignedIn) {
         try {
+          // Get fresh tokens
           const tokens = await GoogleSignin.getTokens();
           
+          if (!tokens.accessToken) {
+            throw new Error('No Google access token available');
+          }
+
+          // Prepare Google Calendar event
           const googleEvent = {
             summary: `${eventType}: ${eventTitle}`,
             description: `Added via Fitness App`,
@@ -140,6 +159,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
             },
           };
 
+          // Send to Google Calendar API
           const response = await fetch(
             'https://www.googleapis.com/calendar/v3/calendars/primary/events',
             {
@@ -151,6 +171,11 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
               body: JSON.stringify(googleEvent),
             }
           );
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Google Calendar API error');
+          }
 
           const googleEventData = await response.json();
           
@@ -161,7 +186,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
 
           newEvent.googleCalendarEventId = googleEventData.id;
         } catch (googleError) {
-          console.log('Google Calendar error:', googleError);
+          console.error('Google Calendar error:', googleError);
           Alert.alert(
             'Warning', 
             'Event was saved locally but could not be added to Google Calendar'
@@ -171,16 +196,8 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
 
       // Update local state
       setEvents(prev => [...prev, {id: eventId, ...newEvent}]);
+      resetForm();
       
-      // Reset form
-      setEventTitle('');
-      setStartTime(null);
-      setEndTime(null);
-      setEventType(null);
-      setSelectedOption('Select');
-      setSelectedDay(null);
-
-      // Show success
       setShowSuccessNotification(true);
       setTimeout(() => setShowSuccessNotification(false), 3000);
       
@@ -192,7 +209,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
       );
     } catch (error) {
       console.error('Error adding event:', error);
-      Alert.alert('Error', 'Failed to add event');
+      Alert.alert('Error', error.message || 'Failed to add event');
     } finally {
       setLoading(false);
     }
@@ -222,7 +239,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
   const handleGoogleSignIn = async () => {
     try {
       await GoogleSignin.hasPlayServices();
-      await GoogleSignin.signIn();
+      const userInfo = await GoogleSignin.signIn();
       setIsGoogleSignedIn(true);
       Alert.alert('Success', 'Google Calendar connected!');
     } catch (error) {
@@ -476,7 +493,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center', // Center the header title
+    justifyContent: 'center',
     marginBottom: 20,
     position: 'relative',
   },

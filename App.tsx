@@ -19,12 +19,6 @@ import ProfileLandingPage from './screens/ProfileLanding';
 
 const Stack = createNativeStackNavigator();
 
-GoogleSignin.configure({
-  scopes: ['https://www.googleapis.com/auth/calendar'], // Izin untuk mengakses Google Calendar
-  webClientId: 'YOUR_WEB_CLIENT_ID', // Ganti dengan Web Client ID dari Firebase Console
-  offlineAccess: true, // Untuk mendapatkan refresh token
-});
-
 const App = () => {
   return (
     <NavigationContainer>

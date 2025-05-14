@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import BackIcon from '../assets/images/button_revised.webp';
@@ -26,8 +27,9 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<{
 type UserData = {
   fullName: string;
   preferredName: string;
-  dateOfBirth: any; // Using any for Firestore timestamp
+  dateOfBirth: any;
   weight: number;
+  height?: number;
   gender: string;
   profileCompleted: boolean;
 };
@@ -35,6 +37,7 @@ type UserData = {
 const ProfileScreen = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [editedData, setEditedData] = useState<Partial<UserData>>({});
   const navigation = useNavigation<ProfileScreenNavigationProp>();
 
   useEffect(() => {
@@ -44,22 +47,20 @@ const ProfileScreen = () => {
   const fetchUserData = async () => {
     const currentUser = auth().currentUser;
     if (!currentUser) {
-      // If no user is logged in, redirect to Auth screen
       navigation.replace('Auth');
       return;
     }
 
     try {
       const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
-      
+
       if (userDoc.exists) {
         const data = userDoc.data() as UserData;
-        
-        // Convert Firestore timestamp to Date if it exists
+
         if (data.dateOfBirth && typeof data.dateOfBirth.toDate === 'function') {
           data.dateOfBirth = data.dateOfBirth.toDate();
         }
-        
+
         setUserData(data);
       } else {
         Alert.alert('Profile Incomplete', 'Please complete your profile information.');
@@ -72,24 +73,28 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleSave = async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    try {
+      await firestore().collection('users').doc(currentUser.uid).update(editedData);
+
+      setUserData({
+        ...userData!,
+        ...editedData,
+      });
+
+      setEditedData({});
+      Alert.alert('Success', 'Your profile has been updated.');
+    } catch (error) {
+      console.error('Error updating user data:', error);
+      Alert.alert('Error', 'Failed to update profile data. Please try again.');
+    }
+  };
+
   const formatDate = (date: Date) => {
     return date ? `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}` : 'Not specified';
-  };
-
-  const handleEditProfile = () => {
-    // Navigate to edit profile screen
-    // You can create this screen later
-    navigation.navigate('EditProfile');
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await auth().signOut();
-      navigation.replace('Auth');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
-    }
   };
 
   if (loading) {
@@ -101,11 +106,9 @@ const ProfileScreen = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('ProfileLanding')}>
-          {/* <Text style={styles.infoValue}>Back</Text> */}
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
           <Image source={BackIcon} style={styles.navIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Personal Details</Text>
@@ -124,43 +127,78 @@ const ProfileScreen = () => {
       </View>
 
       <View style={styles.infoSection}>
-        {/* <Text style={styles.sectionTitle}>Personal Information</Text> */}
-        
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Full Name</Text>
-          <Text style={styles.infoValue}>{userData?.fullName || 'Not specified'}</Text>
+          <TextInput
+            value={editedData.fullName ?? userData?.fullName ?? ''}
+            onChangeText={(text) => setEditedData({ ...editedData, fullName: text })}
+            style={styles.input}
+            placeholder="Enter your full name"
+          />
         </View>
-        
+
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Preferred Name</Text>
-          <Text style={styles.infoValue}>{userData?.preferredName || 'Not specified'}</Text>
+          <TextInput
+            value={editedData.preferredName ?? userData?.preferredName ?? ''}
+            onChangeText={(text) => setEditedData({ ...editedData, preferredName: text })}
+            style={styles.input}
+            placeholder="Enter your preferred name"
+          />
         </View>
-        
+
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Date of Birth</Text>
-          <Text style={styles.infoValue}>
-            {userData?.dateOfBirth ? formatDate(userData.dateOfBirth) : 'Not specified'}
-          </Text>
+          <TextInput
+            value={
+              editedData.dateOfBirth
+                ? formatDate(new Date(editedData.dateOfBirth))
+                : userData?.dateOfBirth
+                ? formatDate(userData.dateOfBirth)
+                : ''
+            }
+            onChangeText={(text) => setEditedData({ ...editedData, dateOfBirth: new Date(text) })}
+            style={styles.input}
+            placeholder="Enter your date of birth (DD/MM/YYYY)"
+          />
         </View>
-        
+
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Gender</Text>
-          <Text style={styles.infoValue}>
-            {userData?.gender 
-              ? userData.gender.charAt(0).toUpperCase() + userData.gender.slice(1) 
-              : 'Not specified'}
-          </Text>
+          <TextInput
+            value={editedData.gender ?? userData?.gender ?? ''}
+            onChangeText={(text) => setEditedData({ ...editedData, gender: text })}
+            style={styles.input}
+            placeholder="Enter your gender"
+          />
         </View>
-        
+
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Weight</Text>
-          <Text style={styles.infoValue}>{userData?.weight ? `${userData.weight} kg` : 'Not specified'}</Text>
+          <TextInput
+            value={editedData.weight?.toString() ?? userData?.weight?.toString() ?? ''}
+            onChangeText={(text) => setEditedData({ ...editedData, weight: Number(text) })}
+            style={styles.input}
+            placeholder="Enter your weight in kg"
+            keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Height</Text>
+          <TextInput
+            value={editedData.height?.toString() ?? userData?.height?.toString() ?? ''}
+            onChangeText={(text) => setEditedData({ ...editedData, height: Number(text) })}
+            style={styles.input}
+            placeholder="Enter your height in cm"
+            keyboardType="numeric"
+          />
         </View>
       </View>
 
-      {/* <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutButtonText}>Sign Out</Text>
-      </TouchableOpacity> */}
+      <TouchableOpacity style={styles.confirmButton} onPress={handleSave}>
+        <Text style={styles.confirmButtonText}>Confirm</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -177,7 +215,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    // backgroundColor: '#007AFF',
     flexDirection: 'row',
     paddingTop: 50,
     paddingVertical: 20,
@@ -191,17 +228,10 @@ const styles = StyleSheet.create({
     marginLeft: 70,
   },
   profileSection: {
-    // backgroundColor: 'white',
     marginTop: 20,
     marginHorizontal: 16,
     borderRadius: 12,
-    padding: 0,
     alignItems: 'center',
-    // shadowColor: '#000',
-    // shadowOffset: {width: 0, height: 2},
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 2,
   },
   avatarContainer: {
     alignItems: 'center',
@@ -230,66 +260,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  editButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 20,
-  },
-  editButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
   infoSection: {
-    // backgroundColor: 'white',
-    marginTop: 0,
     marginHorizontal: 16,
     borderRadius: 12,
     padding: 20,
-    // shadowColor: '#000',
-    // shadowOffset: {width: 0, height: 2},
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
   },
   infoRow: {
-    // flexDirection: 'col',
     justifyContent: 'space-between',
     paddingVertical: 8,
-    borderBottomWidth: 3,
+    borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   infoLabel: {
     fontSize: 16,
     color: '#666',
   },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '500',
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 14,
+    marginTop: 4,
   },
-  signOutButton: {
-    backgroundColor: '#FF3B30',
-    marginTop: 20,
-    marginHorizontal: 16,
-    marginBottom: 30,
-    padding: 15,
-    borderRadius: 12,
+  confirmButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 50,
     alignItems: 'center',
+    alignSelf: 'center', // Pastikan tombol berada di tengah
+    marginTop: 20,
+    marginBottom: 40, // Tambahkan margin bawah untuk ruang kosong
   },
-  signOutButtonText: {
-    color: 'white',
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: 'bold',
-    fontSize: 16,
   },
   navIcon: {
     width: 33,
     height: 33,
-    // marginBottom: 4,
+  },
+  scrollContent: {
+    paddingBottom: 25, // Tambahkan padding bawah untuk ruang kosong
   },
 });
 
