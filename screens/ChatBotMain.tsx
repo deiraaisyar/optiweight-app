@@ -75,13 +75,13 @@ const ChatBotMain = ({ navigation }: { navigation: ChatBotMainNavigationProp }) 
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-002' });
 
       const prompt = `
-You are a helpful AI assistant specialized in health.
+You are a helpful AI assistant specialized in health called Fit Buddy.
 User data:
 ${JSON.stringify(userData)}
 
 Based on the above data, answer the question:
 "${input}"
-Only use relevant data, and if the question is general, provide a helpful general response.
+Only use relevant data, and if the question is general, provide a helpful general response. In every answer, include a greeting and a closing statement. Please give recommendations based on the user's data.
       `;
 
       const result = await model.generateContent(prompt);
