@@ -89,60 +89,79 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
   };
 
   const handleAddEvent = async () => {
+    console.log('handleAddEvent called');
+
     if (!currentUser || !selectedDay || !eventType || !eventTitle || !startTime || !endTime) {
       Alert.alert('Error', 'Please fill in all fields.');
+      console.log('Validation failed:', {
+        currentUser,
+        selectedDay,
+        eventType,
+        eventTitle,
+        startTime,
+        endTime,
+      });
       return;
     }
 
     try {
       setLoading(true);
+      console.log('Validation passed');
 
-      // Calculate the next occurrence of the selected day
       const dayIndex = days.indexOf(selectedDay);
       const today = new Date();
       const nextDay = new Date(today);
       nextDay.setDate(today.getDate() + ((dayIndex - today.getDay() + 7) % 7));
-      
+
       const eventStart = new Date(nextDay);
       eventStart.setHours(startTime.getHours());
       eventStart.setMinutes(startTime.getMinutes());
-      
+
       const eventEnd = new Date(nextDay);
       eventEnd.setHours(endTime.getHours());
       eventEnd.setMinutes(endTime.getMinutes());
 
-      // Create event for Firestore
-      const newEvent = {
+      console.log('Calculated eventStart:', eventStart.toISOString());
+      console.log('Calculated eventEnd:', eventEnd.toISOString());
+
+      console.log('Event Details:', {
         day: selectedDay,
+        type: eventType,
+        title: eventTitle,
+        start: eventStart.toISOString(),
+        end: eventEnd.toISOString(),
+      });
+
+      const newEvent = {
+        day: selectedDay, // Pastikan ini sesuai dengan ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         type: eventType,
         title: eventTitle,
         start: eventStart.toISOString(),
         end: eventEnd.toISOString(),
         completed: false,
         userId: currentUser.uid,
-        googleCalendarEventId: null
+        googleCalendarEventId: null,
       };
 
-      // Save to Firestore first
       const userEventsRef = firestore()
         .collection('users')
         .doc(currentUser.uid)
         .collection('events');
 
+      console.log('New Event Data:', newEvent);
+
       const firestoreResponse = await userEventsRef.add(newEvent);
+      console.log('Firestore Response ID:', firestoreResponse.id);
+
       const eventId = firestoreResponse.id;
 
-      // Try to add to Google Calendar if connected
       if (isGoogleSignedIn) {
         try {
-          // Get fresh tokens
           const tokens = await GoogleSignin.getTokens();
-          
           if (!tokens.accessToken) {
             throw new Error('No Google access token available');
           }
 
-          // Prepare Google Calendar event
           const googleEvent = {
             summary: `${eventType}: ${eventTitle}`,
             description: `Added via Fitness App`,
@@ -159,52 +178,47 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
             },
           };
 
-          // Send to Google Calendar API
+          console.log('Google Calendar Event:', googleEvent);
+
           const response = await fetch(
             'https://www.googleapis.com/calendar/v3/calendars/primary/events',
             {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${tokens.accessToken}`,
+                Authorization: `Bearer ${tokens.accessToken}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify(googleEvent),
             }
           );
-          
+
           if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error?.message || 'Google Calendar API error');
           }
 
           const googleEventData = await response.json();
-          
-          // Update Firestore with Google Calendar event ID
+          console.log('Google Calendar Response:', googleEventData);
+
           await userEventsRef.doc(eventId).update({
-            googleCalendarEventId: googleEventData.id
+            googleCalendarEventId: googleEventData.id,
           });
 
-          newEvent.googleCalendarEventId = googleEventData.id;
+          console.log('Event successfully added to Firestore and Google Calendar');
         } catch (googleError) {
           console.error('Google Calendar error:', googleError);
-          Alert.alert(
-            'Warning', 
-            'Event was saved locally but could not be added to Google Calendar'
-          );
         }
       }
 
-      // Update local state
-      setEvents(prev => [...prev, {id: eventId, ...newEvent}]);
+      setEvents(prev => [...prev, { id: eventId, ...newEvent }]);
       resetForm();
-      
       setShowSuccessNotification(true);
       setTimeout(() => setShowSuccessNotification(false), 3000);
-      
+
       Alert.alert(
-        'Success', 
-        isGoogleSignedIn 
-          ? 'Event added to both your app and Google Calendar!' 
+        'Success',
+        isGoogleSignedIn
+          ? 'Event added to both your app and Google Calendar!'
           : 'Event added to your app calendar!'
       );
     } catch (error) {
