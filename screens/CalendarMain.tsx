@@ -29,7 +29,7 @@ import BackIcon from '../assets/images/back_button.webp';
 
 // Configure Google Sign-In
 GoogleSignin.configure({
-  webClientId: GOOGLE_WEB_CLIENT_ID,
+  webClientId: GOOGLE_WEB_CLIENT_ID, // Pastikan ini diatur dengan benar di .env
   scopes: ['https://www.googleapis.com/auth/calendar'],
   offlineAccess: true,
 });
@@ -49,6 +49,9 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
+  const [streakCount, setStreakCount] = useState(0);
+  const [lastStreakUpdate, setLastStreakUpdate] = useState<Date | null>(null);
+  const [weeklyWorkouts, setWeeklyWorkouts] = useState(0);
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // Changed to start with Sunday
 
@@ -56,17 +59,25 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     const initialize = async () => {
       const user = auth().currentUser;
       setCurrentUser(user);
-      
+
       if (user) {
-        fetchEvents(user.uid);
+        await fetchEvents(user.uid);
+        await removePastEvents(); // Hapus kegiatan yang sudah lewat
+        await fetchStreakData(); // Ambil data streak
       }
 
-      // Check Google Sign-In status
+      // Otomatis sign-in ke Google Calendar
       try {
+        await GoogleSignin.hasPlayServices();
         const isSignedIn = await GoogleSignin.isSignedIn();
-        setIsGoogleSignedIn(isSignedIn);
+        if (!isSignedIn) {
+          console.log('Google account not signed in. Attempting to sign in...');
+          await GoogleSignin.signIn();
+          console.log('Successfully signed in to Google account.');
+        }
+        setIsGoogleSignedIn(true);
       } catch (error) {
-        console.error('Error checking Google sign-in status:', error);
+        console.error('Error during Google Sign-In:', error);
       }
     };
 
@@ -124,16 +135,8 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
       console.log('Calculated eventStart:', eventStart.toISOString());
       console.log('Calculated eventEnd:', eventEnd.toISOString());
 
-      console.log('Event Details:', {
-        day: selectedDay,
-        type: eventType,
-        title: eventTitle,
-        start: eventStart.toISOString(),
-        end: eventEnd.toISOString(),
-      });
-
       const newEvent = {
-        day: selectedDay, // Pastikan ini sesuai dengan ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        day: selectedDay,
         type: eventType,
         title: eventTitle,
         start: eventStart.toISOString(),
@@ -162,38 +165,34 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
             throw new Error('No Google access token available');
           }
 
-          const googleEvent = {
-            summary: `${eventType}: ${eventTitle}`,
-            description: `Added via Fitness App`,
-            start: {
-              dateTime: eventStart.toISOString(),
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            end: {
-              dateTime: eventEnd.toISOString(),
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            reminders: {
-              useDefault: true,
-            },
-          };
-
-          console.log('Google Calendar Event:', googleEvent);
+          console.log('Google Access Token:', tokens.accessToken);
 
           const response = await fetch(
-            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events/import',
             {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${tokens.accessToken}`,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify(googleEvent),
+              body: JSON.stringify({
+                summary: `${eventType}: ${eventTitle}`,
+                description: `Added via OptiWeight App`,
+                start: {
+                  dateTime: eventStart.toISOString(),
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                },
+                end: {
+                  dateTime: eventEnd.toISOString(),
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                },
+              }),
             }
           );
 
           if (!response.ok) {
             const errorData = await response.json();
+            console.error('Google Calendar API Error:', errorData);
             throw new Error(errorData.error?.message || 'Google Calendar API error');
           }
 
@@ -250,6 +249,40 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     }
   };
 
+  const fetchStreakData = async () => {
+    if (!currentUser) return;
+
+    try {
+      const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        setStreakCount(userData.streakCount || 0);
+        setLastStreakUpdate(userData.lastStreakUpdate?.toDate() || null);
+        setWeeklyWorkouts(userData.weeklyWorkouts || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching streak data:', error);
+    }
+  };
+
+  const updateStreakData = async (newStreakCount: number, newWeeklyWorkouts: number) => {
+    if (!currentUser) return;
+
+    try {
+      const now = new Date();
+      await firestore().collection('users').doc(currentUser.uid).update({
+        streakCount: newStreakCount,
+        lastStreakUpdate: now,
+        weeklyWorkouts: newWeeklyWorkouts,
+      });
+      setLastStreakUpdate(now);
+      setStreakCount(newStreakCount);
+      setWeeklyWorkouts(newWeeklyWorkouts);
+    } catch (error) {
+      console.error('Error updating streak data:', error);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       await GoogleSignin.hasPlayServices();
@@ -272,6 +305,38 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     }
   };
 
+  const removePastEvents = async () => {
+    if (!currentUser) return;
+
+    try {
+      const now = new Date();
+      const userEventsRef = firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('events');
+
+      // Ambil semua kegiatan
+      const snapshot = await userEventsRef.get();
+      const pastEvents = snapshot.docs.filter(doc => {
+        const eventData = doc.data();
+        return new Date(eventData.end) < now; // Periksa apakah waktu akhir sudah lewat
+      });
+
+      // Hapus kegiatan yang sudah lewat
+      for (const event of pastEvents) {
+        await userEventsRef.doc(event.id).delete();
+        console.log(`Deleted past event: ${event.id}`);
+      }
+
+      // Perbarui daftar kegiatan lokal
+      setEvents(prevEvents =>
+        prevEvents.filter(event => new Date(event.end) >= now)
+      );
+    } catch (error) {
+      console.error('Error removing past events:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with Back Button */}
@@ -290,27 +355,6 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
           </Text>
         </View>
       )}
-
-      {/* Google Calendar Connection Status */}
-      <View style={styles.googleAuthContainer}>
-        {isGoogleSignedIn ? (
-          <TouchableOpacity 
-            style={[styles.googleButton, styles.googleSignOutButton]}
-            onPress={handleGoogleSignOut}>
-            <Text style={styles.googleButtonText}>
-              Disconnect Google Calendar
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={[styles.googleButton, styles.googleSignInButton]}
-            onPress={handleGoogleSignIn}>
-            <Text style={styles.googleButtonText}>
-              Connect Google Calendar
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
 
       {/* Day Selector */}
       <Text style={styles.subtitle}>
@@ -523,24 +567,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
-  },
-  googleAuthContainer: {
-    marginBottom: 15,
-  },
-  googleButton: {
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  googleSignInButton: {
-    backgroundColor: '#4285F4',
-  },
-  googleSignOutButton: {
-    backgroundColor: '#DB4437',
-  },
-  googleButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
   successNotification: {
     backgroundColor: '#E3FCEC',

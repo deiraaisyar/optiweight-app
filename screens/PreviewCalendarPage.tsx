@@ -43,6 +43,7 @@ const PreviewCalendarPage = () => {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [streak, setStreak] = useState<number>(0);
 
   useEffect(() => {
     const getUser = async () => {
@@ -62,6 +63,25 @@ const PreviewCalendarPage = () => {
       fetchActivities(activeDate);
     }
   }, [activeDate, currentUser]);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const user = auth().currentUser;
+        if (user) {
+          const userDoc = await firestore().collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            const data = userDoc.data();
+            setStreak(data?.streakCount || 0); // Ambil streakCount dari Firestore
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching streak:', error);
+      }
+    };
+
+    fetchStreak();
+  }, []);
 
   const fetchActivities = async (date: Date) => {
     try {
@@ -126,7 +146,7 @@ const PreviewCalendarPage = () => {
               <Image source={CalendarIcon} style={styles.streakIconImage} />
             </View>
             <View style={styles.streakTextContainer}>
-              <Text style={styles.streakTitle}>Amazing work on your 34th streak!</Text>
+              <Text style={styles.streakTitle}>Amazing work on your {streak}th streak!</Text>
               <Text style={styles.streakSubtitle}>
                 While studying for your academics, ease your time management by setting up a workout
                 schedule along with your class schedule.

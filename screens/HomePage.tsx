@@ -63,12 +63,40 @@ const HomePage = () => {
   const [workoutEvents, setWorkoutEvents] = useState<WorkoutEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [buttonPressed, setButtonPressed] = useState(false);
+  const [streakCountWeek, setStreakCountWeek] = useState<number[]>([0, 0, 0, 0]);
+  const [currentWeek, setCurrentWeek] = useState<number>(getCurrentWeek());
+  const [monthlyStreakData, setMonthlyStreakData] = useState<number[]>([0, 0, 0, 0]);
+  const [lastStreakUpdate, setLastStreakUpdate] = useState<Date | null>(null);
+  const [lastWeek, setLastWeek] = useState<number>(getCurrentWeek());
 
   useEffect(() => {
     fetchUserData();
     const unsubscribe = fetchWorkoutEvents();
     return () => unsubscribe && unsubscribe();
   }, [navigation]);
+
+  useEffect(() => {
+    if (workoutEvents.length > 0) {
+      calculateMonthlyStreakData(workoutEvents, currentDate.getMonth(), currentDate.getFullYear());
+    }
+  }, [currentDate, workoutEvents]);
+
+  useEffect(() => {
+    console.log('Streak Count Updated:', streakCount);
+  }, [streakCount]);
+
+  useEffect(() => {
+    console.log('Streak History Updated:', streakHistory);
+  }, [streakHistory]);
+
+  useEffect(() => {
+    const initializeStreak = async () => {
+      await fetchStreakData();
+      await checkStreakReset();
+    };
+
+    initializeStreak();
+  }, []); // Pastikan hanya dipanggil sekali saat komponen dimuat
 
   const fetchUserData = async () => {
     const currentUser = auth().currentUser;
@@ -79,23 +107,13 @@ const HomePage = () => {
 
     try {
       const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
-      
       if (userDoc.exists) {
         const data = userDoc.data() as UserData;
-        
-        if (data.dateOfBirth && typeof data.dateOfBirth.toDate === 'function') {
-          data.dateOfBirth = data.dateOfBirth.toDate();
-        }
 
-        if (data.lastStreakUpdate && typeof data.lastStreakUpdate.toDate === 'function') {
-          data.lastStreakUpdate = data.lastStreakUpdate.toDate();
-          setLastWorkoutDate(data.lastStreakUpdate);
-        }
-        
         setUserData(data);
         setStreakCount(data.streakCount || 0);
-        setWeeklyWorkouts(data.weeklyWorkouts || 0);
-        setStreakHistory(data.streakHistory || [0, 0, 0, 0]);
+        setLastStreakUpdate(data.lastStreakUpdate?.toDate() || null); // Pastikan ini diatur
+        console.log('Fetched User Data:', data);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -107,10 +125,7 @@ const HomePage = () => {
   const fetchWorkoutEvents = () => {
     const currentUser = auth().currentUser;
 
-    if (!currentUser) {
-      console.log('❌ No user is logged in!');
-      return;
-    }
+    if (!currentUser) return;
 
     const unsubscribe = firestore()
       .collection('users')
@@ -119,26 +134,21 @@ const HomePage = () => {
       .where('type', '==', 'Workout')
       .onSnapshot(snapshot => {
         if (snapshot.empty) {
-          console.log('⚠️ No workout events found in user subcollection.');
           setWorkoutEvents([]);
           return;
         }
 
-        const events = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            start: new Date(data.start),
-            end: new Date(data.end),
-            completed: data.completed || false,
-          };
-        }) as WorkoutEvent[];
+        const events = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          start: new Date(doc.data().start),
+          end: new Date(doc.data().end),
+          completed: doc.data().completed || false,
+        }));
 
         setWorkoutEvents(events);
-        checkCurrentStreak(events);
-        calculateWeeklyWorkouts(events);
-        findTodayWorkout(events);
+        calculateWeeklyWorkouts(events); // Pastikan hanya menghitung ulang
+        calculateMonthlyStreakData(events, currentDate.getMonth(), currentDate.getFullYear());
       });
 
     return unsubscribe;
@@ -149,16 +159,23 @@ const HomePage = () => {
     const todayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
     const todayWorkouts = events.filter(event => event.day === todayName);
 
+    console.log('Finding Today Workout:', todayWorkouts);
+
     for (const event of todayWorkouts) {
       const startTime = new Date(event.start);
       const endTime = new Date(event.end);
 
+      console.log('Checking Workout:', event.title);
+      console.log('Start Time:', startTime, 'End Time:', endTime);
+
       if (now >= startTime && now <= endTime) {
+        console.log('Today Workout Found:', event.title);
         setTodayWorkout(event);
         return;
       }
     }
 
+    console.log('No workout scheduled for today.');
     setTodayWorkout(null);
   };
 
@@ -167,23 +184,92 @@ const HomePage = () => {
     const todayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
     const todayWorkouts = events.filter(event => event.day === todayName);
 
+    console.log('Current Time:', now);
+    console.log('Today Workouts:', todayWorkouts);
+
+    let streakActive = false;
+
     for (const event of todayWorkouts) {
       const startTime = new Date(event.start);
       const endTime = new Date(event.end);
 
+      console.log('Checking Workout:', event.title);
+      console.log('Start Time:', startTime, 'End Time:', endTime);
+
+      // Jika workout sedang berlangsung dan belum selesai
       if (now >= startTime && now <= endTime && !event.completed) {
+        console.log('Streak is active for workout:', event.title);
         setCurrentStreakActive(true);
-        return;
+        streakActive = true;
+        return; // Exit the loop jika streak ditemukan
       }
     }
 
-    setCurrentStreakActive(false);
+    // Jika tidak ada streak aktif, periksa apakah ada workout yang selesai
+    const completedToday = todayWorkouts.some(event => event.completed);
+    if (!streakActive && !completedToday) {
+      console.log('No active streak or completed workout today. Resetting streak count to 0.');
+      const newStreakHistory = [...streakHistory];
+      newStreakHistory.shift();
+      newStreakHistory.push(streakCount);
+      setStreakHistory(newStreakHistory);
+
+      setCurrentStreakActive(false);
+      setStreakCount(0);
+      updateStreakInDatabase(0);
+    } else {
+      console.log('Workout completed today. Streak count remains unchanged.');
+    }
   };
 
   const calculateWeeklyWorkouts = (events: WorkoutEvent[]) => {
     const completedWorkouts = events.filter(event => event.completed);
     const uniqueDays = new Set(completedWorkouts.map(event => event.day));
-    setWeeklyWorkouts(uniqueDays.size);
+    setWeeklyWorkouts(uniqueDays.size); // Hitung ulang tanpa mereset
+  };
+
+  const calculateStreakCountWeek = (events: WorkoutEvent[]) => {
+    const weeks = [0, 0, 0, 0]; // Array untuk menyimpan streak per minggu
+    const now = new Date();
+
+    events.forEach(event => {
+      const eventDate = new Date(event.start);
+      const dayOfMonth = eventDate.getDate();
+
+      // Tentukan minggu ke berapa berdasarkan tanggal
+      let weekIndex = Math.floor((dayOfMonth - 1) / 7);
+
+      // Jika minggu ke-4 (sisa hari), pastikan index tidak melebihi 3
+      if (weekIndex > 3) weekIndex = 3;
+
+      // Tambahkan streak jika event sudah selesai
+      if (event.completed && eventDate.getMonth() === now.getMonth()) {
+        weeks[weekIndex]++;
+      }
+    });
+
+    console.log('Streak Count per Week:', weeks);
+    setStreakCountWeek(weeks);
+  };
+
+  const calculateMonthlyStreakData = (events: WorkoutEvent[], month: number, year: number) => {
+    const weeks = [0, 0, 0, 0]; // Reset data untuk 4 minggu
+
+    events.forEach(event => {
+      const eventDate = new Date(event.start);
+      if (eventDate.getMonth() === month && eventDate.getFullYear() === year) {
+        const dayOfMonth = eventDate.getDate();
+        let weekIndex = Math.floor((dayOfMonth - 1) / 7);
+        if (weekIndex > 3) weekIndex = 3; // Pastikan minggu ke-4 tidak melebihi index 3
+
+        if (event.completed) {
+          weeks[weekIndex]++;
+        }
+      }
+    });
+
+    console.log(`Monthly Streak Data for ${month + 1}/${year}:`, weeks);
+    setMonthlyStreakData(weeks);
   };
 
   const updateStreakInDatabase = async (newStreakCount: number) => {
@@ -194,29 +280,94 @@ const HomePage = () => {
       const now = new Date();
       await firestore().collection('users').doc(currentUser.uid).update({
         streakCount: newStreakCount,
-        lastStreakUpdate: now
+        lastStreakUpdate: now,
       });
       setLastWorkoutDate(now);
+      console.log(`Streak count updated to ${newStreakCount} in the database.`);
     } catch (error) {
       console.error('Error updating streak:', error);
     }
   };
 
-  const handleStreakPress = async () => {
-    if (currentStreakActive && todayWorkout) {
-      setButtonPressed(true);
-      const newStreakCount = streakCount + 1;
+  const fetchStreakData = async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    try {
+      const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        setStreakCount(userData.streakCount || 0);
+        setLastStreakUpdate(userData.lastStreakUpdate?.toDate() || null);
+        setWeeklyWorkouts(userData.weeklyWorkouts || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching streak data:', error);
+    }
+  };
+
+  const updateStreakData = async (newStreakCount: number, newWeeklyWorkouts: number) => {
+    console.log('Updating streak data:', { newStreakCount, newWeeklyWorkouts });
+
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    try {
+      const now = new Date();
+      await firestore().collection('users').doc(currentUser.uid).update({
+        streakCount: newStreakCount,
+        lastStreakUpdate: now,
+        weeklyWorkouts: newWeeklyWorkouts,
+      });
+      setLastStreakUpdate(now);
       setStreakCount(newStreakCount);
+      setWeeklyWorkouts(newWeeklyWorkouts);
+    } catch (error) {
+      console.error('Error updating streak data:', error);
+    }
+  };
 
-      const newStreakHistory = [...streakHistory];
-      newStreakHistory.shift();
-      newStreakHistory.push(newStreakCount);
-      setStreakHistory(newStreakHistory);
+  const handleStreakPress = async () => {
+    if (!todayWorkout || todayWorkout.completed) return;
 
-      await updateStreakInDatabase(newStreakCount);
-      await markWorkoutAsCompleted();
+    try {
+      await firestore()
+        .collection('users')
+        .doc(auth().currentUser?.uid)
+        .collection('events')
+        .doc(todayWorkout.id)
+        .update({ completed: true });
 
-      Alert.alert('Streak Updated', `Your streak is now ${newStreakCount} days!`);
+      setTodayWorkout({ ...todayWorkout, completed: true });
+
+      const newStreakCount = streakCount + 1;
+      const newWeeklyWorkouts = weeklyWorkouts + 1;
+
+      await updateStreakData(newStreakCount, newWeeklyWorkouts); // Pastikan nilai yang benar dikirim
+    } catch (error) {
+      console.error('Error updating streak:', error);
+    }
+  };
+
+  const checkStreakReset = async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    const now = new Date();
+    const lastUpdate = lastStreakUpdate || new Date(0);
+
+    // Reset streak jika tidak ada workout yang selesai hari ini
+    if (now.toDateString() !== lastUpdate.toDateString()) {
+      console.log('No workout completed today. Resetting streak.');
+      await updateStreakData(0, weeklyWorkouts);
+    }
+
+    // Reset weekly workouts jika minggu baru dimulai
+    const currentWeek = getCurrentWeek();
+    if (currentWeek !== lastWeek) {
+      console.log('New week detected. Resetting weekly workouts.');
+      await updateStreakData(streakCount, 0);
+      setLastWeek(currentWeek);
     }
   };
 
@@ -318,11 +469,17 @@ const HomePage = () => {
             <TouchableOpacity 
               onPress={handleStreakPress}
               style={[
-                styles.statCircle, 
-                currentStreakActive ? styles.activeStreakCircle : styles.inactiveStreakCircle
+                styles.statCircle,
+                todayWorkout?.completed ? styles.completedStreakCircle : styles.activeStreakCircle,
               ]}
+              disabled={todayWorkout?.completed} // Nonaktifkan tombol jika sudah selesai
             >
-              <Text style={[styles.statNumber, currentStreakActive ? styles.activeStreakNumber : styles.inactiveStreakNumber]}>
+              <Text
+                style={[
+                  styles.statNumber,
+                  todayWorkout?.completed ? styles.completedStreakNumber : styles.activeStreakNumber,
+                ]}
+              >
                 {streakCount}
               </Text>
             </TouchableOpacity>
@@ -411,7 +568,7 @@ const HomePage = () => {
                 !currentStreakActive && styles.completedButtonText
               ]}
             >
-              {streakCount} Days Streak
+              {streakCount} Streak
             </Text>
           </TouchableOpacity>
         </View>
@@ -435,7 +592,7 @@ const HomePage = () => {
               labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
               datasets: [
                 {
-                  data: streakHistory,
+                  data: monthlyStreakData, // Data dinamis berdasarkan bulan dan tahun
                 },
               ],
             }}
@@ -577,6 +734,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
+    paddingBottom: 16,
   },
   infoCard: {
     backgroundColor: '#B7E1FF',
@@ -615,6 +773,11 @@ const styles = StyleSheet.create({
   inactiveStreakCircle: {
     backgroundColor: '#d1d5db',
   },
+  completedStreakCircle: {
+    backgroundColor: '#d1d5db', // Warna abu-abu untuk tombol selesai
+    borderWidth: 1,
+    borderColor: '#9ca3af', // Border abu-abu
+  },
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -627,6 +790,9 @@ const styles = StyleSheet.create({
   },
   inactiveStreakNumber: {
     color: '#6b7280',
+  },
+  completedStreakNumber: {
+    color: '#6b7280', // Warna teks abu-abu
   },
   statLabel: {
     fontSize: 14,
@@ -716,7 +882,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#B7E1FF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 32, // Tambahkan jarak lebih besar
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -779,3 +945,10 @@ const styles = StyleSheet.create({
 });
 
 export default HomePage;
+
+function getCurrentWeek() {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const dayOfWeek = startOfMonth.getDay();
+  return Math.ceil((now.getDate() + dayOfWeek) / 7);
+}
