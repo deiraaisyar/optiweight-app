@@ -51,21 +51,19 @@ const AuthScreen = () => {
   const signIn = async () => {
     try {
       await auth().signInWithEmailAndPassword(email, password);
-      setError('');
-      console.log('Logged in successfully!');
 
-      // Periksa apakah data pengguna sudah lengkap
       const user = auth().currentUser;
       if (user) {
-        const userDoc = await firestore().collection('users').doc(user.uid).get();
-        if (userDoc.exists && userDoc.data()?.profileCompleted) {
-          navigation.navigate('Home'); // Jika data lengkap, arahkan ke Home
+        const response = await fetch(`http://192.168.0.108:5000/api/users/${user.uid}`);
+        const userData = await response.json();
+
+        if (userData.profileCompleted) {
+          navigation.navigate('Home');
         } else {
-          navigation.navigate('UserData'); // Jika data belum lengkap, arahkan ke UserDataScreen
+          navigation.navigate('UserData');
         }
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
       console.error('Error during sign-in:', e);
     }
   };

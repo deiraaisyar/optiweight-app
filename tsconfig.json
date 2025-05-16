@@ -1,4 +1,15 @@
 {
   "extends": "@react-native/typescript-config/tsconfig.json",
-  "files": ["env.d.ts"]
+  "files": ["env.d.ts"],
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

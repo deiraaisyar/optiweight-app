@@ -214,24 +214,16 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     }
   };
 
-  const fetchEvents = async (userId: string) => {
+  const fetchEvents = async () => {
     try {
-      setLoading(true);
-      const snapshot = await firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('events')
-        .get();
-
-      const eventsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setEvents(eventsData);
+      const response = await fetch(`http://192.168.0.108:5000/api/events/${auth().currentUser?.uid}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      const events = await response.json();
+      setEvents(events);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch events');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching events:', error);
     }
   };
 

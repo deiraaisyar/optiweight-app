@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
+import { RootStackParamList } from '../../types';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { LineChart, BarChart } from 'react-native-chart-kit';
@@ -70,10 +70,14 @@ const HomePage = () => {
   const [lastWeek, setLastWeek] = useState<number>(getCurrentWeek());
 
   useEffect(() => {
-    fetchUserData();
-    const unsubscribe = fetchWorkoutEvents();
-    return () => unsubscribe && unsubscribe();
-  }, [navigation]);
+    const fetchData = async () => {
+      await fetchUserData();
+      await fetchWorkoutEvents();
+      setLoading(false); // Pastikan loading diubah menjadi false
+    };
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     if (workoutEvents.length > 0) {
@@ -107,59 +111,37 @@ const HomePage = () => {
   }, []); // Pastikan hanya dipanggil sekali saat komponen dimuat
 
   const fetchUserData = async () => {
-    const currentUser = auth().currentUser;
-    if (!currentUser) {
-      navigation.replace('Auth');
-      return;
-    }
-
     try {
-      const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
-      if (userDoc.exists) {
-        const data = userDoc.data() as UserData;
-
-        setUserData(data);
-        setStreakCount(data.streakCount || 0);
-        setLastStreakUpdate(data.lastStreakUpdate?.toDate() || null); // Pastikan ini diatur
-        console.log('Fetched User Data:', data);
+      console.log('Fetching user data...');
+      const response = await fetch(`http://192.168.0.108:5000/api/users/${auth().currentUser?.uid}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data');
       }
+      const data = await response.json();
+      console.log('User data fetched:', data);
+      setUserData(data);
+      setStreakCount(data.streakCount || 0);
+      setLastStreakUpdate(data.lastStreakUpdate ? new Date(data.lastStreakUpdate) : null);
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
-      setLoading(false);
+      setLoading(false); // Pastikan loading diubah menjadi false
     }
   };
 
-  const fetchWorkoutEvents = () => {
-    const currentUser = auth().currentUser;
-
-    if (!currentUser) return;
-
-    const unsubscribe = firestore()
-      .collection('users')
-      .doc(currentUser.uid)
-      .collection('events')
-      .where('type', '==', 'Workout')
-      .onSnapshot(snapshot => {
-        if (snapshot.empty) {
-          setWorkoutEvents([]);
-          return;
-        }
-
-        const events = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          start: new Date(doc.data().start),
-          end: new Date(doc.data().end),
-          completed: doc.data().completed || false,
-        }));
-
-        setWorkoutEvents(events);
-        calculateWeeklyWorkouts(events); // Pastikan hanya menghitung ulang
-        calculateMonthlyStreakData(events, currentDate.getMonth(), currentDate.getFullYear());
-      });
-
-    return unsubscribe;
+  const fetchWorkoutEvents = async () => {
+    try {
+      console.log('Fetching workout events...');
+      const response = await fetch(`http://192.168.0.108:5000/api/events/${auth().currentUser?.uid}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch workout events');
+      }
+      const events = await response.json();
+      console.log('Workout events fetched:', events);
+      setWorkoutEvents(events);
+    } catch (error) {
+      console.error('Error fetching workout events:', error);
+    }
   };  
   
   const findTodayWorkout = (events: WorkoutEvent[]) => {
@@ -428,31 +410,15 @@ const HomePage = () => {
   };
 
   const removePastEvents = async () => {
-    const currentUser = auth().currentUser;
-    if (!currentUser) return;
-
     try {
-      const now = new Date();
-      const userEventsRef = firestore()
-        .collection('users')
-        .doc(currentUser.uid)
-        .collection('events');
-
-      const snapshot = await userEventsRef.get();
-      console.log('Current Time:', now);
-      console.log('Fetched Events:', snapshot.docs.map(doc => doc.data()));
-
-      const pastEvents = snapshot.docs.filter(doc => {
-        const eventData = doc.data();
-        const eventEnd = new Date(eventData.end);
-        console.log('Event End Time:', eventEnd, 'Is Past:', eventEnd < now);
-        return eventEnd < now;
+      const response = await fetch(`http://192.168.0.108:5000/api/events/${auth().currentUser?.uid}/past-events`, {
+        method: 'DELETE',
       });
-
-      for (const event of pastEvents) {
-        await userEventsRef.doc(event.id).delete();
-        console.log(`Deleted past event: ${event.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to remove past events');
       }
+      const data = await response.json();
+      console.log(data.message);
     } catch (error) {
       console.error('Error removing past events:', error);
     }

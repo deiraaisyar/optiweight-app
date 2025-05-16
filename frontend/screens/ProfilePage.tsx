@@ -45,31 +45,15 @@ const ProfileScreen = () => {
   }, []);
 
   const fetchUserData = async () => {
-    const currentUser = auth().currentUser;
-    if (!currentUser) {
-      navigation.replace('Auth');
-      return;
-    }
-
     try {
-      const userDoc = await firestore().collection('users').doc(currentUser.uid).get();
-
-      if (userDoc.exists) {
-        const data = userDoc.data() as UserData;
-
-        if (data.dateOfBirth && typeof data.dateOfBirth.toDate === 'function') {
-          data.dateOfBirth = data.dateOfBirth.toDate();
-        }
-
-        setUserData(data);
-      } else {
-        Alert.alert('Profile Incomplete', 'Please complete your profile information.');
+      const response = await fetch(`http://192.168.0.108:5000/api/users/${auth().currentUser?.uid}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data');
       }
+      const data = await response.json();
+      setUserData(data);
     } catch (error) {
       console.error('Error fetching user data:', error);
-      Alert.alert('Error', 'Failed to load profile data. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 

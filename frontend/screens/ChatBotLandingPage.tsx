@@ -15,7 +15,7 @@ import NotificationIcon from '../assets/images/notification_icon.webp';
 import UserIcon from '../assets/images/user_icon.webp';
 import BackIcon from '../assets/images/back_button.webp';
 import BubbleChatIcon from '../assets/images/chat_bubble.webp';
-import { RootStackParamList } from '../types'; // Import RootStackParamList
+import { RootStackParamList } from '../../types'; // Import RootStackParamList
 
 type ChatBotLandingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatBotLanding'>;
 

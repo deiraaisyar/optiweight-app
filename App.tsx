@@ -3,19 +3,19 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-import AuthScreen from './screens/AuthScreenTest';
-import LandingScreen from './screens/LandingScreen';
-import RegisterPage from './screens/RegisterPage';
-import UserDataScreen from './screens/UserDataScreen';
-import ChatBotLandingPage from './screens/ChatBotLandingPage';
-import HomePage from './screens/HomePage';
-import ChatBotMain from './screens/ChatBotMain';
-import ProfilePage from './screens/ProfilePage';
-import CalendarLanding from './screens/CalendarLandingPage';
-import NotificiationsPage from './screens/NotificationPage';
-import CalendarMain from './screens/CalendarMain';
-import PreviewCalendar from './screens/PreviewCalendarPage';
-import ProfileLandingPage from './screens/ProfileLanding';
+import AuthScreen from './frontend/screens/AuthScreenTest';
+import LandingScreen from './frontend/screens/LandingScreen';
+import RegisterPage from './frontend/screens/RegisterPage';
+import UserDataScreen from './frontend/screens/UserDataScreen';
+import ChatBotLandingPage from './frontend/screens/ChatBotLandingPage';
+import HomePage from './frontend/screens/HomePage';
+import ChatBotMain from './frontend/screens/ChatBotMain';
+import ProfilePage from './frontend/screens/ProfilePage';
+import CalendarLanding from './frontend/screens/CalendarLandingPage';
+import NotificiationsPage from './frontend/screens/NotificationPage';
+import CalendarMain from './frontend/screens/CalendarMain';
+import PreviewCalendar from './frontend/screens/PreviewCalendarPage';
+import ProfileLandingPage from './frontend/screens/ProfileLanding';
 
 const Stack = createNativeStackNavigator();
 

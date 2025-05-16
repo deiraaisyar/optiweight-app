@@ -16,7 +16,7 @@ import MicIcon from '../assets/images/mic_icon.webp';
 import PlusIcon from '../assets/images/plus_icon.webp';
 import BackIcon from '../assets/images/back_button.webp';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
+import { RootStackParamList } from '../../types';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth'; // Tambahkan impor untuk Firebase Auth
 
@@ -37,27 +37,25 @@ const ChatBotMain = ({ navigation }: { navigation: ChatBotMainNavigationProp }) 
 
   const getData = async () => {
     try {
-      // Ambil pengguna yang sedang login
       const user = auth().currentUser;
 
       if (user) {
-        // Ambil dokumen pengguna berdasarkan UID
-        const userDoc = await firestore().collection('users').doc(user.uid).get();
-
-        if (userDoc.exists) {
-          console.log('User data fetched:', userDoc.data());
-          setUserData(userDoc.data());
-        } else {
-          console.log('No user document found for UID:', user.uid);
+        const response = await fetch(`http://192.168.0.108:5000/api/users/${user.uid}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
         }
+
+        const data = await response.json();
+        console.log('User data fetched:', data);
+        setUserData(data);
       } else {
         console.log('No user is logged in');
-        navigation.navigate('Auth'); // Redirect ke halaman login jika tidak ada pengguna login
+        navigation.navigate('Auth');
       }
     } catch (error) {
-      console.error('Error fetching user data from Firestore:', error);
+      console.error('Error fetching user data from backend:', error);
     } finally {
-      setLoadingUser(false); // Set loading selesai
+      setLoadingUser(false);
     }
   };
 

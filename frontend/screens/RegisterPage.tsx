@@ -12,7 +12,7 @@ import { getApp } from '@react-native-firebase/app';
 import { getFirestore } from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types'; // Import RootStackParamList
+import { RootStackParamList } from '../../types'; // Import RootStackParamList
 
 type RegisterPageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 

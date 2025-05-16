@@ -18,7 +18,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { RootStackParamList } from '../types';
+import { RootStackParamList } from '../../types';
 
 // Icon photo
 const photoIcon = require('../assets/images/fill_photo.webp');
@@ -54,19 +54,23 @@ const UserDataScreen = () => {
 
   const checkUserData = async (userId: string) => {
     try {
-      const userDoc = await firestore().collection('users').doc(userId).get();
-      if (userDoc.exists && userDoc.data()?.profileCompleted) {
+      const response = await fetch(`http://192.168.0.108:5000/api/users/${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data');
+      }
+
+      const userData = await response.json();
+      if (userData.profileCompleted) {
         navigation.replace('Home');
-      } else if (userDoc.exists) {
-        const userData = userDoc.data();
-        if (userData?.fullName) setFullName(userData.fullName);
-        if (userData?.preferredName) setPreferredName(userData.preferredName);
-        if (userData?.weight) setWeight(userData.weight.toString());
-        if (userData?.height) setHeight(userData.height.toString());
-        if (userData?.gender) setGender(userData.gender);
-        if (userData?.dateOfBirth)
-          setDateOfBirth(userData.dateOfBirth.toDate());
-        if (userData?.photoUrl) setPhotoUrl(userData.photoUrl);
+      } else {
+        if (userData.fullName) setFullName(userData.fullName);
+        if (userData.preferredName) setPreferredName(userData.preferredName);
+        if (userData.weight) setWeight(userData.weight.toString());
+        if (userData.height) setHeight(userData.height.toString());
+        if (userData.gender) setGender(userData.gender);
+        if (userData.dateOfBirth)
+          setDateOfBirth(new Date(userData.dateOfBirth));
+        if (userData.photoUrl) setPhotoUrl(userData.photoUrl);
       }
     } catch (error) {
       console.error('Error checking user data:', error);
@@ -160,23 +164,26 @@ const UserDataScreen = () => {
     setLoading(true);
 
     try {
-      await firestore()
-        .collection('users')
-        .doc(user.uid)
-        .set(
-          {
-            fullName,
-            preferredName,
-            weight: Number(weight),
-            height: Number(height),
-            gender,
-            dateOfBirth,
-            photoUrl: photoUrl || 'default_photo_url', // Gunakan URL default jika tidak ada foto
-            profileCompleted: true,
-            updatedAt: firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+      const response = await fetch(`http://192.168.0.108:5000/api/users/${user.uid}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName,
+          preferredName,
+          weight: Number(weight),
+          height: Number(height),
+          gender,
+          dateOfBirth,
+          photoUrl: photoUrl || 'default_photo_url',
+          profileCompleted: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save user data');
+      }
 
       setLoading(false);
       Alert.alert('Success', 'Profile updated successfully', [
