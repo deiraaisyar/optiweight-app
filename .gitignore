@@ -77,3 +77,4 @@ yarn-error.log
 .env
 
 backend/src/serviceAccountKey.json
+backend/dist/serviceAccountKey.json
