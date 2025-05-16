@@ -40,7 +40,7 @@ const ChatBotMain = ({ navigation }: { navigation: ChatBotMainNavigationProp }) 
       const user = auth().currentUser;
 
       if (user) {
-        const response = await fetch(`http://192.168.0.108:5000/api/users/${user.uid}`);
+        const response = await fetch(`${process.env.API_BASE_URL}/api/users/${user.uid}`);
         if (!response.ok) {
           throw new Error('Failed to fetch user data');
         }

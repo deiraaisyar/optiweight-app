@@ -54,7 +54,7 @@ const AuthScreen = () => {
 
       const user = auth().currentUser;
       if (user) {
-        const response = await fetch(`http://192.168.0.108:5000/api/users/${user.uid}`);
+        const response = await fetch(`${process.env.API_BASE_URL}/api/users/${user.uid}`);
         const userData = await response.json();
 
         if (userData.profileCompleted) {
