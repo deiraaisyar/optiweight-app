@@ -118,4 +118,17 @@ Thank you to all contributors and users who have supported the development of Op
 
 ---
 
+## 👥 Contributors
+
+We would like to thank the following contributors for their efforts in building OptiWeight:
+
+- [Farhan Adiwidya Pradana](https://github.com/Farscent) - Hustler
+- [Muhammad Keenan Basyir]() - Hipster
+- [Dhimas Putra Sulistio](https://github.com/muddglobb) - Hacker (Frontend Developer)
+- [Deira Aisya Refani](https://github.com/deiraaisyar) - Hacker (Backend Developer)
+
+Feel free to join us and contribute to this project! 🚀
+
+---
+
 Feel free to adjust this content to better suit your project! 😊
