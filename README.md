@@ -60,6 +60,34 @@ The APK will be located at app-debug.apk.
 
 ---
 
+## 📱 Launching on Android Emulator
+
+To run the application on an Android emulator, follow these steps:
+
+1. **Start Metro Bundler**:
+   Open a terminal and run:
+   ```bash
+   npx react-native start
+   ```
+
+2. **Clean Android Build**:
+   Open another terminal, navigate to the android folder, and clean the build:
+   ```bash
+   cd android
+   ./gradlew clean
+   cd ..
+   ```
+
+3. **Run the Application on Emulator**:
+   In the same terminal, run:
+   ```bash
+   npx react-native run-android
+   ```
+
+   This will build and install the app on the connected emulator or device.
+
+---
+
 ## 🐳 Docker Deployment
 
 ### Build and Run with Docker
