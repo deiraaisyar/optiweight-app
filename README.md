@@ -127,8 +127,3 @@ We would like to thank the following contributors for their efforts in building 
 - [Dhimas Putra Sulistio](https://github.com/muddglobb) - Hacker (Frontend Developer)
 - [Deira Aisya Refani](https://github.com/deiraaisyar) - Hacker (Backend Developer)
 
-Feel free to join us and contribute to this project! 🚀
-
----
-
-Feel free to adjust this content to better suit your project! 😊
