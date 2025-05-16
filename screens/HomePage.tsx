@@ -77,6 +77,14 @@ const HomePage = () => {
 
   useEffect(() => {
     if (workoutEvents.length > 0) {
+      findTodayWorkout(workoutEvents);
+      checkCurrentStreak(workoutEvents);
+      calculateWeeklyWorkouts(workoutEvents);
+    }
+  }, [workoutEvents]);
+
+  useEffect(() => {
+    if (workoutEvents.length > 0) {
       calculateMonthlyStreakData(workoutEvents, currentDate.getMonth(), currentDate.getFullYear());
     }
   }, [currentDate, workoutEvents]);
@@ -159,7 +167,9 @@ const HomePage = () => {
     const todayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
     const todayWorkouts = events.filter(event => event.day === todayName);
 
-    console.log('Finding Today Workout:', todayWorkouts);
+    console.log('Current Time:', now);
+    console.log('Today Name:', todayName);
+    console.log('Today Workouts:', todayWorkouts);
 
     for (const event of todayWorkouts) {
       const startTime = new Date(event.start);
@@ -196,24 +206,19 @@ const HomePage = () => {
       console.log('Checking Workout:', event.title);
       console.log('Start Time:', startTime, 'End Time:', endTime);
 
-      // Jika workout sedang berlangsung dan belum selesai
       if (now >= startTime && now <= endTime && !event.completed) {
         console.log('Streak is active for workout:', event.title);
         setCurrentStreakActive(true);
         streakActive = true;
-        return; // Exit the loop jika streak ditemukan
+        return;
       }
     }
 
-    // Jika tidak ada streak aktif, periksa apakah ada workout yang selesai
     const completedToday = todayWorkouts.some(event => event.completed);
+    console.log('Completed Today:', completedToday);
+
     if (!streakActive && !completedToday) {
       console.log('No active streak or completed workout today. Resetting streak count to 0.');
-      const newStreakHistory = [...streakHistory];
-      newStreakHistory.shift();
-      newStreakHistory.push(streakCount);
-      setStreakHistory(newStreakHistory);
-
       setCurrentStreakActive(false);
       setStreakCount(0);
       updateStreakInDatabase(0);
@@ -307,8 +312,6 @@ const HomePage = () => {
   };
 
   const updateStreakData = async (newStreakCount: number, newWeeklyWorkouts: number) => {
-    console.log('Updating streak data:', { newStreakCount, newWeeklyWorkouts });
-
     const currentUser = auth().currentUser;
     if (!currentUser) return;
 
@@ -383,17 +386,9 @@ const HomePage = () => {
         .update({ completed: true });
 
       const newStreakCount = streakCount + 1;
-      setStreakCount(newStreakCount);
+      const newWeeklyWorkouts = weeklyWorkouts + 1;
 
-      await firestore()
-        .collection('users')
-        .doc(auth().currentUser?.uid)
-        .update({
-          streakCount: newStreakCount,
-          lastStreakUpdate: new Date(),
-        });
-
-      fetchWorkoutEvents();
+      await updateStreakData(newStreakCount, newWeeklyWorkouts);
     } catch (error) {
       console.error('Error marking workout as completed:', error);
     }
@@ -432,6 +427,37 @@ const HomePage = () => {
     return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
   };
 
+  const removePastEvents = async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) return;
+
+    try {
+      const now = new Date();
+      const userEventsRef = firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('events');
+
+      const snapshot = await userEventsRef.get();
+      console.log('Current Time:', now);
+      console.log('Fetched Events:', snapshot.docs.map(doc => doc.data()));
+
+      const pastEvents = snapshot.docs.filter(doc => {
+        const eventData = doc.data();
+        const eventEnd = new Date(eventData.end);
+        console.log('Event End Time:', eventEnd, 'Is Past:', eventEnd < now);
+        return eventEnd < now;
+      });
+
+      for (const event of pastEvents) {
+        await userEventsRef.doc(event.id).delete();
+        console.log(`Deleted past event: ${event.id}`);
+      }
+    } catch (error) {
+      console.error('Error removing past events:', error);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -466,13 +492,13 @@ const HomePage = () => {
           </View>
           
           <View style={styles.statItem}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleStreakPress}
               style={[
                 styles.statCircle,
                 todayWorkout?.completed ? styles.completedStreakCircle : styles.activeStreakCircle,
               ]}
-              disabled={todayWorkout?.completed} // Nonaktifkan tombol jika sudah selesai
+              disabled={todayWorkout?.completed}
             >
               <Text
                 style={[

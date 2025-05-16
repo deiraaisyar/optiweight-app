@@ -65,20 +65,6 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
         await removePastEvents(); // Hapus kegiatan yang sudah lewat
         await fetchStreakData(); // Ambil data streak
       }
-
-      // Otomatis sign-in ke Google Calendar
-      try {
-        await GoogleSignin.hasPlayServices();
-        const isSignedIn = await GoogleSignin.isSignedIn();
-        if (!isSignedIn) {
-          console.log('Google account not signed in. Attempting to sign in...');
-          await GoogleSignin.signIn();
-          console.log('Successfully signed in to Google account.');
-        }
-        setIsGoogleSignedIn(true);
-      } catch (error) {
-        console.error('Error during Google Sign-In:', error);
-      }
     };
 
     initialize();
@@ -315,25 +301,39 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
         .doc(currentUser.uid)
         .collection('events');
 
-      // Ambil semua kegiatan
+      // Ambil semua event dari Firestore
       const snapshot = await userEventsRef.get();
+      console.log('Current Time:', now);
+      console.log('Event End Time:', eventEnd, 'Is Past:', isPast, 'Is Completed:', isCompleted);
+
+      // Filter event yang sudah lewat atau sudah selesai
       const pastEvents = snapshot.docs.filter(doc => {
         const eventData = doc.data();
-        return new Date(eventData.end) < now; // Periksa apakah waktu akhir sudah lewat
+        const eventEnd = new Date(eventData.end); // Konversi ke Date object
+        const isPast = eventEnd < now;
+        const isCompleted = eventData.completed === true;
+
+        console.log('Event:', eventData.title, 'End Time:', eventEnd, 'Is Past:', isPast, 'Is Completed:', isCompleted);
+        return isPast || isCompleted; // Hapus jika salah satu kondisi terpenuhi
       });
 
-      // Hapus kegiatan yang sudah lewat
+      // Hapus event yang memenuhi kondisi
       for (const event of pastEvents) {
         await userEventsRef.doc(event.id).delete();
-        console.log(`Deleted past event: ${event.id}`);
+        console.log(`Deleted past/completed event: ${event.id}`);
       }
 
-      // Perbarui daftar kegiatan lokal
+      // Perbarui daftar event lokal
       setEvents(prevEvents =>
-        prevEvents.filter(event => new Date(event.end) >= now)
+        prevEvents.filter(event => {
+          const eventEnd = new Date(event.end);
+          return eventEnd >= now && !event.completed; // Simpan hanya event yang masih relevan
+        })
       );
+
+      console.log('Past/completed events successfully removed.');
     } catch (error) {
-      console.error('Error removing past events:', error);
+      console.error('Error removing past/completed events:', error);
     }
   };
 
