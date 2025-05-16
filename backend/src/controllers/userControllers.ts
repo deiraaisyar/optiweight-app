@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import admin from 'firebase-admin';
+import { db } from '../firebaseConfig';
 
 export const fetchUserData = async (
   req: Request<{ userId: string }>,
@@ -15,19 +16,7 @@ export const fetchUserData = async (
     }
 
     const userData = userDoc.data();
-    res.json({
-      fullName: userData?.fullName || '',
-      preferredName: userData?.preferredName || '',
-      dateOfBirth: userData?.dateOfBirth || null,
-      weight: userData?.weight || 0,
-      height: userData?.height || null,
-      gender: userData?.gender || '',
-      profileCompleted: userData?.profileCompleted || false,
-      streakCount: userData?.streakCount || 0,
-      weeklyWorkouts: userData?.weeklyWorkouts || 0,
-      streakHistory: userData?.streakHistory || [],
-      lastStreakUpdate: userData?.lastStreakUpdate || null,
-    });
+    res.json(userData);
   } catch (error) {
     console.error('Error fetching user data:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -39,16 +28,26 @@ export const saveUserData = async (req: Request, res: Response) => {
   const userData = req.body;
 
   try {
-    console.time('Save User Data'); // Tambahkan log waktu
-    const db = admin.firestore();
-
-    // Simpan data pengguna ke Firestore
     await db.collection('users').doc(uid).set(userData, { merge: true });
-
-    console.timeEnd('Save User Data'); // Log waktu selesai
     res.status(200).send({ success: true });
   } catch (error) {
     console.error('Error saving user data:', error);
     res.status(500).send({ error: 'Failed to save user data' });
+  }
+};
+
+export const getUser = async (req: Request, res: Response) => {
+  try {
+    const userSnapshot = await db.collection('users').doc(req.params.id).get();
+    if (!userSnapshot.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.status(200).json({ id: userSnapshot.id, ...userSnapshot.data() });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'An unknown error occurred' });
+    }
   }
 };

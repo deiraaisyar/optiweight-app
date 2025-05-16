@@ -1,24 +1,39 @@
 import { Request, Response } from 'express';
 import { db } from '../firebaseConfig';
+import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export const fetchWorkoutEvents = async (
   req: Request<{ userId: string }>,
   res: Response
-): Promise<void> => {
+) => {
   const { userId } = req.params;
+  console.log('Fetching workout events for userId:', userId);
 
   try {
-    const snapshot = await db
+    const eventsSnapshot = await db
       .collection('users')
       .doc(userId)
       .collection('events')
-      .where('type', '==', 'Workout')
       .get();
 
-    const events = snapshot.docs.map(doc => ({
+    console.log('Events snapshot size:', eventsSnapshot.size);
+
+    if (eventsSnapshot.empty) {
+      console.log('No events found for userId:', userId);
+      res.status(404).json({ message: 'No events found' });
+      return;
+    }
+
+    const events = eventsSnapshot.docs.map((doc: QueryDocumentSnapshot) => ({
       id: doc.id,
       ...doc.data(),
     }));
+
+    eventsSnapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
+      console.log(doc.id, doc.data());
+    });
+
+    console.log('Workout events fetched:', events);
 
     res.json(events);
   } catch (error) {
@@ -28,32 +43,41 @@ export const fetchWorkoutEvents = async (
 };
 
 export const removePastEvents = async (
-    req: Request<{ userId: string }>,
-    res: Response
-  ): Promise<void> => {
-    const { userId } = req.params;
-  
-    try {
-      const now = new Date();
-      const snapshot = await db
-        .collection('users')
-        .doc(userId)
-        .collection('events')
-        .get();
-  
-      const batch = db.batch();
-  
-      snapshot.docs.forEach(doc => {
-        const event = doc.data();
-        if (new Date(event.end) < now || event.completed) {
-          batch.delete(doc.ref);
-        }
-      });
-  
-      await batch.commit();
-      res.json({ message: 'Past events removed successfully' });
-    } catch (error) {
-      console.error('Error removing past events:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  };
+  req: Request<{ userId: string }>,
+  res: Response
+) => {
+  const { userId } = req.params;
+
+  try {
+    const now = new Date();
+    const eventsSnapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('events')
+      .get();
+
+    const batch = db.batch();
+    eventsSnapshot.docs.forEach(doc => {
+      const event = doc.data();
+      if (new Date(event.end) < now) {
+        batch.delete(doc.ref);
+      }
+    });
+
+    await batch.commit();
+    res.status(200).json({ message: 'Past events removed successfully' });
+  } catch (error) {
+    console.error('Error removing past events:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getEvents = async (req: Request, res: Response) => {
+  try {
+    const eventsSnapshot = await db.collection('events').get();
+    const events = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+};

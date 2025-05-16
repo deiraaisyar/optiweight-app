@@ -30,7 +30,7 @@ import BackIcon from '../assets/images/back_button.webp';
 // Configure Google Sign-In
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID, // Pastikan ini diatur dengan benar di .env
-  scopes: ['https://www.googleapis.com/auth/calendar'],
+  scopes: ['https://www.googleapis.com/auth/calendar'], // Izin untuk mengakses Google Calendar
   offlineAccess: true,
 });
 
@@ -118,6 +118,7 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
       eventEnd.setHours(endTime.getHours());
       eventEnd.setMinutes(endTime.getMinutes());
 
+      // Pindahkan log setelah deklarasi eventStart dan eventEnd
       console.log('Calculated eventStart:', eventStart.toISOString());
       console.log('Calculated eventEnd:', eventEnd.toISOString());
 
@@ -153,8 +154,9 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
 
           console.log('Google Access Token:', tokens.accessToken);
 
+          // Kirim permintaan ke Google Calendar API
           const response = await fetch(
-            'https://www.googleapis.com/calendar/v3/calendars/primary/events/import',
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
             {
               method: 'POST',
               headers: {
@@ -183,15 +185,17 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
           }
 
           const googleEventData = await response.json();
-          console.log('Google Calendar Response:', googleEventData);
+          console.log('Google Calendar Event Data:', googleEventData);
 
+          // Perbarui Firestore dengan ID event Google Calendar
           await userEventsRef.doc(eventId).update({
             googleCalendarEventId: googleEventData.id,
           });
 
-          console.log('Event successfully added to Firestore and Google Calendar');
-        } catch (googleError) {
-          console.error('Google Calendar error:', googleError);
+          console.log('Google Calendar Event ID saved to Firestore:', googleEventData.id);
+        } catch (error) {
+          console.error('Error adding event to Google Calendar:', error);
+          Alert.alert('Error', 'Failed to add event to Google Calendar');
         }
       }
 
@@ -218,7 +222,9 @@ const CalendarMain = ({navigation}: {navigation: any}) => {
     try {
       const response = await fetch(`http://192.168.0.108:5000/api/events/${auth().currentUser?.uid}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch events');
+        const errorData = await response.json();
+        console.error('Google Calendar API Error:', errorData);
+        throw new Error(errorData.error?.message || 'Google Calendar API error');
       }
       const events = await response.json();
       setEvents(events);

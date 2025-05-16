@@ -1,16 +1,14 @@
 // filepath: backend/src/firebaseConfig.ts
 import admin from 'firebase-admin';
-import * as dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
-
-const serviceAccount = require('./serviceAccountKey.json'); 
+const serviceAccount = require(path.join(__dirname, '../serviceAccountKey.json'));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
 
 const db = admin.firestore();
 
-export { admin, db };
+export { db };
+export default admin;

@@ -52,9 +52,29 @@ const ProfileScreen = () => {
       }
       const data = await response.json();
       setUserData(data);
+      setLoading(false); // Hentikan loading setelah data berhasil diambil
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setLoading(false); // Hentikan loading meskipun terjadi error
     }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return 'Not specified';
+
+    // Jika date adalah Firestore Timestamp dengan _seconds dan _nanoseconds
+    if (date._seconds) {
+      const parsedDate = new Date(date._seconds * 1000); // Konversi _seconds ke milidetik
+      return `${parsedDate.getDate().toString().padStart(2, '0')}/${(parsedDate.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}/${parsedDate.getFullYear()}`;
+    }
+
+    // Jika date adalah objek Date atau string
+    const parsedDate = date.toDate ? date.toDate() : new Date(date);
+    return `${parsedDate.getDate().toString().padStart(2, '0')}/${(parsedDate.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}/${parsedDate.getFullYear()}`;
   };
 
   const handleSave = async () => {
@@ -62,11 +82,19 @@ const ProfileScreen = () => {
     if (!currentUser) return;
 
     try {
-      await firestore().collection('users').doc(currentUser.uid).update(editedData);
+      // Pastikan dateOfBirth dikonversi ke objek Date sebelum disimpan
+      const updatedData = {
+        ...editedData,
+        dateOfBirth: editedData.dateOfBirth
+          ? new Date(editedData.dateOfBirth)
+          : userData?.dateOfBirth,
+      };
+
+      await firestore().collection('users').doc(currentUser.uid).update(updatedData);
 
       setUserData({
         ...userData!,
-        ...editedData,
+        ...updatedData,
       });
 
       setEditedData({});
@@ -75,10 +103,6 @@ const ProfileScreen = () => {
       console.error('Error updating user data:', error);
       Alert.alert('Error', 'Failed to update profile data. Please try again.');
     }
-  };
-
-  const formatDate = (date: Date) => {
-    return date ? `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}` : 'Not specified';
   };
 
   if (loading) {

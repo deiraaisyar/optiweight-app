@@ -3,7 +3,7 @@ import { fetchWorkoutEvents, removePastEvents } from '../controllers/eventContro
 
 const router = express.Router();
 
-router.get('/:userId', fetchWorkoutEvents);
+router.get('/events/:userId', fetchWorkoutEvents);
 router.delete('/:userId/past-events', removePastEvents);
 
 export default router;
