@@ -2,6 +2,7 @@
 
 ## 📱 Overview
 OptiWeight is a mobile application designed to help users manage their weight effectively. It provides features like activity tracking, chatbot assistance, notifications, and user profile management to create a personalized experience.
+<img width="868" height="492" alt="image" src="https://github.com/user-attachments/assets/d4844a04-4a15-4264-9dde-041c247fc235" />
 
 ---
 
@@ -155,3 +156,8 @@ We would like to thank the following contributors for their efforts in building 
 - [Dhimas Putra Sulistio](https://github.com/muddglobb) - Hacker (Frontend Developer)
 - [Deira Aisya Refani](https://github.com/deiraaisyar) - Hacker (Backend Developer)
 
+## Snapshots
+<img width="871" height="486" alt="image" src="https://github.com/user-attachments/assets/6dae0eb2-25de-4bbb-8862-8160d1e210fe" />
+
+
+For more details, please visit: https://drive.google.com/file/d/1I4-tbuNxjuKj4eKtpqm0_I63nonUiMKP/view?usp=sharing
